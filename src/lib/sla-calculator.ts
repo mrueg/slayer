@@ -1,4 +1,6 @@
 export type Configuration = 'series' | 'parallel';
+export type InputMode = 'percentage' | 'downtime';
+export type DowntimePeriod = 'day' | 'month' | 'year';
 
 export interface SLAItem {
   id: string;
@@ -8,6 +10,9 @@ export interface SLAItem {
   replicas?: number; // Number of redundant instances (for components)
   config?: Configuration; // For groups
   children?: SLAItem[]; // For groups
+  inputMode?: InputMode;
+  downtimeValue?: number; // in minutes
+  downtimePeriod?: DowntimePeriod;
 }
 
 export interface CalculationResult {
@@ -54,6 +59,19 @@ export const getDowntime = (sla: number): Omit<CalculationResult, 'compositeSla'
     downtimePerMonth: year / 12,
     downtimePerDay: year / 365.25,
   };
+};
+
+export const slaFromDowntime = (minutes: number, period: DowntimePeriod): number => {
+  const totalMinutes = {
+    year: 365.25 * 24 * 60,
+    month: (365.25 * 24 * 60) / 12,
+    day: 24 * 60,
+  }[period];
+  
+  if (minutes >= totalMinutes) return 0;
+  if (minutes <= 0) return 100;
+  
+  return (1 - minutes / totalMinutes) * 100;
 };
 
 export const formatDuration = (minutes: number): string => {

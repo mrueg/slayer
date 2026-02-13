@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Info, Calculator, Layers, Share2, FolderPlus, Component, RefreshCcw, Eraser } from 'lucide-react';
+import { Plus, Trash2, Info, Calculator, Layers, Share2, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent } from 'lucide-react';
 import { 
   SLAItem, 
   Configuration, 
   calculateSLA, 
   getDowntime, 
-  formatDuration 
+  formatDuration,
+  slaFromDowntime,
+  DowntimePeriod,
+  InputMode
 } from '@/lib/sla-calculator';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -62,6 +65,20 @@ interface ItemNodeProps {
 
 const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth }) => {
   const isGroup = item.type === 'group';
+  const mode = item.inputMode || 'percentage';
+
+  const handleModeToggle = (newMode: InputMode) => {
+    onUpdate(item.id, { inputMode: newMode });
+  };
+
+  const handleDowntimeChange = (value: number, period: DowntimePeriod) => {
+    const newSla = slaFromDowntime(value, period);
+    onUpdate(item.id, { 
+      sla: newSla, 
+      downtimeValue: value, 
+      downtimePeriod: period 
+    });
+  };
 
   return (
     <div className={cn(
@@ -158,18 +175,73 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               />
             </div>
           </div>
-          <div className="w-full md:w-32">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">SLA (%)</label>
-            <input
-              type="number"
-              step="0.00000001"
-              min="0"
-              max="100"
-              value={item.sla}
-              onChange={(e) => onUpdate(item.id, { sla: parseFloat(e.target.value) || 0 })}
-              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm"
-            />
+
+          <div className="flex flex-col gap-1 w-full md:w-auto">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Input Mode</label>
+            <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm h-[38px]">
+              <button
+                onClick={() => handleModeToggle('percentage')}
+                className={cn(
+                  "p-1.5 rounded-md transition-all",
+                  mode === 'percentage' ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-100"
+                )}
+                title="Input SLA Percentage"
+              >
+                <Percent className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleModeToggle('downtime')}
+                className={cn(
+                  "p-1.5 rounded-md transition-all",
+                  mode === 'downtime' ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-100"
+                )}
+                title="Input Acceptable Downtime"
+              >
+                <Clock className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+
+          {mode === 'percentage' ? (
+            <div className="w-full md:w-32">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">SLA (%)</label>
+              <input
+                type="number"
+                step="0.00000001"
+                min="0"
+                max="100"
+                value={item.sla}
+                onChange={(e) => onUpdate(item.id, { sla: parseFloat(e.target.value) || 0 })}
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm"
+              />
+            </div>
+          ) : (
+            <div className="w-full md:w-48 flex gap-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Downtime (min)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={item.downtimeValue || 0}
+                  onChange={(e) => handleDowntimeChange(parseFloat(e.target.value) || 0, item.downtimePeriod || 'month')}
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm"
+                />
+              </div>
+              <div className="w-20">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Per</label>
+                <select
+                  value={item.downtimePeriod || 'month'}
+                  onChange={(e) => handleDowntimeChange(item.downtimeValue || 0, e.target.value as DowntimePeriod)}
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[38px]"
+                >
+                  <option value="day">Day</option>
+                  <option value="month">Month</option>
+                  <option value="year">Year</option>
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="w-full md:w-20">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Replicas</label>
             <input
