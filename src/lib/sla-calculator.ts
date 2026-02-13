@@ -11,7 +11,7 @@ export interface SLAItem {
   config?: Configuration; // For groups
   children?: SLAItem[]; // For groups
   inputMode?: InputMode;
-  downtimeValue?: number; // in minutes
+  downtimeValue?: number; // in seconds
   downtimePeriod?: DowntimePeriod;
 }
 
@@ -79,17 +79,17 @@ export const getDowntime = (sla: number): Omit<CalculationResult, 'compositeSla'
   };
 };
 
-export const slaFromDowntime = (minutes: number, period: DowntimePeriod): number => {
-  const totalMinutes = {
-    year: 365.25 * 24 * 60,
-    month: (365.25 * 24 * 60) / 12,
-    day: 24 * 60,
+export const slaFromDowntime = (seconds: number, period: DowntimePeriod): number => {
+  const totalSeconds = {
+    year: 365.25 * 24 * 60 * 60,
+    month: (365.25 * 24 * 60 * 60) / 12,
+    day: 24 * 60 * 60,
   }[period];
   
-  if (minutes >= totalMinutes) return 0;
-  if (minutes <= 0) return 100;
+  if (seconds >= totalSeconds) return 0;
+  if (seconds <= 0) return 100;
   
-  return (1 - minutes / totalMinutes) * 100;
+  return (1 - seconds / totalSeconds) * 100;
 };
 
 export const formatDuration = (minutes: number): string => {

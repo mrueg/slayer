@@ -219,7 +219,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           ) : (
             <div className="w-full md:w-48 flex gap-2">
               <div className="flex-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Downtime (min)</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Downtime (sec)</label>
                 <input
                   type="number"
                   min="0"
