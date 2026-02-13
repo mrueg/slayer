@@ -4,6 +4,8 @@
 
 **slayer** is a modern composite SLA (Service Level Agreement) calculator. It helps you determine the total availability of complex systems by modeling components in series or parallel configurations.
 
+**Live version:** [https://mrueg.github.io/slayer/](https://mrueg.github.io/slayer/)
+
 ## Features
 
 - **Composite SLA Calculation**: Easily calculate the total availability of systems with multiple dependencies.
