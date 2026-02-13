@@ -380,7 +380,7 @@ export default function SLACalculator() {
       <div className="max-w-7xl mx-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black tracking-tighter text-slate-900 flex items-center gap-3 uppercase italic">
+            <h1 className="text-4xl font-black tracking-tighter text-slate-900 flex items-center gap-3 italic">
               <Calculator className="w-10 h-10 text-blue-600" />
               slayer | composite SLA calculator
             </h1>
