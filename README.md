@@ -2,7 +2,7 @@
 
 > Raining Blood (and Uptime)
 
-**slayer** is a beautiful, modern composite SLA (Service Level Agreement) calculator. It helps you determine the total availability of complex systems by modeling components in series or parallel configurations.
+**slayer** is a modern composite SLA (Service Level Agreement) calculator. It helps you determine the total availability of complex systems by modeling components in series or parallel configurations.
 
 ## Features
 
@@ -40,4 +40,4 @@ In a parallel configuration, only one component needs to be available for the sy
 
 ## License
 
-MIT
+Apache-2.0
