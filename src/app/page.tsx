@@ -380,6 +380,10 @@ export default function SLACalculator() {
             </section>
           </div>
         </div>
+
+        <footer className="mt-12 pt-8 border-t border-slate-200 text-center text-slate-400 text-sm font-medium italic">
+          South of Heaven, North of Five Nines
+        </footer>
       </div>
     </div>
   );
