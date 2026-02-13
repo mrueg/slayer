@@ -9,6 +9,7 @@ import {
   getDowntime, 
   formatDuration,
   slaFromDowntime,
+  formatSLAPercentage,
   DowntimePeriod,
   InputMode
 } from '@/lib/sla-calculator';
@@ -100,7 +101,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 className="bg-transparent font-semibold text-slate-700 outline-none focus:ring-b-2 focus:ring-blue-500 border-b border-transparent hover:border-slate-300 transition-all"
               />
               <span className="text-xs font-mono bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                {calculateSLA(item).toFixed(8)}%
+                {formatSLAPercentage(calculateSLA(item))}%
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -419,7 +420,7 @@ export default function SLACalculator() {
               <div className="p-8 text-center bg-gradient-to-br from-blue-600 to-indigo-700">
                 <p className="text-blue-100 text-sm font-semibold uppercase tracking-widest mb-2">Total System SLA</p>
                 <div className="text-5xl font-black mb-2 tracking-tighter">
-                  {compositeSla.toFixed(8)}%
+                  {formatSLAPercentage(compositeSla)}%
                 </div>
               </div>
               

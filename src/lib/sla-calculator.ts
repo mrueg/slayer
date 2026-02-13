@@ -51,6 +51,24 @@ export const calculateSLA = (item: SLAItem): number => {
   }
 };
 
+export const formatSLAPercentage = (value: number): string => {
+  if (value >= 100) return '100';
+  if (value <= 0) return '0';
+
+  // Use a high fixed precision to ensure we have enough digits
+  const str = value.toFixed(12);
+  const [intPart, fracPart] = str.split('.');
+  
+  let resultFrac = '';
+  for (let i = 0; i < fracPart.length; i++) {
+    const digit = fracPart[i];
+    resultFrac += digit;
+    if (digit !== '9') break;
+  }
+  
+  return `${intPart}.${resultFrac}`;
+};
+
 export const getDowntime = (sla: number): Omit<CalculationResult, 'compositeSla'> => {
   const totalMinutesYear = 365.25 * 24 * 60;
   const year = totalMinutesYear * (1 - sla / 100);
