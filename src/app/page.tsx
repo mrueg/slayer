@@ -380,11 +380,11 @@ export default function SLACalculator() {
       <div className="max-w-7xl mx-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              <Calculator className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-black tracking-tighter text-slate-900 flex items-center gap-3 uppercase italic">
+              <Calculator className="w-10 h-10 text-blue-600" />
               slayer
             </h1>
-            <p className="text-slate-500 mt-1 font-medium italic">Raining Blood (and Uptime)</p>
+            <p className="text-slate-500 mt-1 font-bold italic tracking-wide">Raining Blood (and Uptime)</p>
           </div>
           <div className="flex gap-2">
             <button 
