@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "slayer",
+  title: "slayer | composite SLA calculator",
   description: "Composite SLA Calculator - Raining Blood (and Uptime)",
 };
 
