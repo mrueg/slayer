@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# slayer
+
+> Raining Blood (and Uptime)
+
+**slayer** is a beautiful, modern composite SLA (Service Level Agreement) calculator. It helps you determine the total availability of complex systems by modeling components in series or parallel configurations.
+
+## Features
+
+- **Composite SLA Calculation**: Easily calculate the total availability of systems with multiple dependencies.
+- **Series & Parallel Modeling**: 
+  - **Series**: For components that depend on each other (Availability = A × B).
+  - **Parallel**: For redundant components (Availability = 1 - (1-A) × (1-B)).
+- **Downtime Projection**: Instantly see allowed downtime per year, month, and day.
+- **Interactive UI**: Add, remove, and nest groups and components to match your infrastructure.
+- **Built with**: Next.js, React, Tailwind CSS, and Lucide React.
 
 ## Getting Started
 
-First, run the development server:
+First, install the dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it Works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Series Configuration
+In a series configuration, all components must be available for the system to be available. If you have two components with 99.9% SLA, the composite SLA is `99.9% * 99.9% = 99.8001%`.
 
-## Learn More
+### Parallel Configuration
+In a parallel configuration, only one component needs to be available for the system to be functional. This represents redundancy. If you have two components with 99.9% SLA in parallel, the composite SLA is `1 - (0.1% * 0.1%) = 99.9999%`.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
