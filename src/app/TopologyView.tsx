@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SLAItem, calculateSLA, formatSLAPercentage } from '@/lib/sla-calculator';
 import { 
   Layers, Component, Zap, Shield, Database, Globe, MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Server, ZapOff, HardDrive, Cpu, Network,
   Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Activity, Skull, RefreshCcw, Flame
 } from 'lucide-react';
+import KillModal from './KillModal';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -97,6 +98,7 @@ const TopologyNode: React.FC<{
   const isDown = failed >= replicas;
   const isDegraded = failed > 0 && failed < replicas;
   const impactScore = blastRadiusMap[item.id] || 0;
+  const [showKillModal, setShowKillModal] = useState(false);
 
   // Calculate heatmap color
   const getHeatColor = (score: number) => {
@@ -228,18 +230,10 @@ const TopologyNode: React.FC<{
                 e.stopPropagation();
                 if (isDown || isDegraded) {
                   onUpdate(item.id, { failedReplicas: 0 });
+                } else if (replicas > 1) {
+                  setShowKillModal(true);
                 } else {
-                  // In topology view, we just toggle to full fail or open modal?
-                  // Let's open modal if replicas > 1
-                  if (replicas > 1) {
-                    // For simplicity in topology, let's just trigger full failure
-                    // or we could emit a custom event to parent.
-                    // Let's just do full fail for now to keep topology simple,
-                    // or implement the same logic as list.
-                    onUpdate(item.id, { failedReplicas: replicas });
-                  } else {
-                    onUpdate(item.id, { failedReplicas: 1 });
-                  }
+                  onUpdate(item.id, { failedReplicas: 1 });
                 }
               }}
               className={cn(
@@ -261,6 +255,17 @@ const TopologyNode: React.FC<{
             </div>
           )}
         </div>
+
+        {showKillModal && (
+          <KillModal 
+            item={item} 
+            onClose={() => setShowKillModal(false)}
+            onConfirm={(failedCount) => {
+              onUpdate(item.id, { failedReplicas: failedCount });
+              setShowKillModal(false);
+            }}
+          />
+        )}
 
         {/* Right/Bottom connector to children */}
         {isGroup && item.children && item.children.length > 0 && (
