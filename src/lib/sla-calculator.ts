@@ -55,6 +55,27 @@ export const calculateSLA = (item: SLAItem): number => {
   return (1 - failureProbability) * 100;
 };
 
+export interface BottleneckResult {
+  id: string;
+  sla: number;
+}
+
+export const findBottleneck = (item: SLAItem): BottleneckResult => {
+  const currentSla = calculateSLA(item);
+  let bottleneck: BottleneckResult = { id: item.id, sla: currentSla };
+
+  if (item.type === 'group' && item.children && item.children.length > 0) {
+    for (const child of item.children) {
+      const childBottleneck = findBottleneck(child);
+      if (childBottleneck.sla < bottleneck.sla) {
+        bottleneck = childBottleneck;
+      }
+    }
+  }
+
+  return bottleneck;
+};
+
 export const formatSLAPercentage = (value: number): string => {
   if (value >= 100) return '100';
   if (value <= 0) return '0';
