@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -299,13 +299,15 @@ interface ItemNodeProps {
   onAddChild: (groupId: string, type: 'component' | 'group') => void;
   depth: number;
   bottleneckIds: string[];
+  chaosMode: boolean;
 }
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds }) => {
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
   const [showNotes, setShowNotes] = useState(!!item.notes);
+  const isFailed = item.isFailed;
 
   const handleModeToggle = (newMode: InputMode) => {
     onUpdate(item.id, { inputMode: newMode });
@@ -327,8 +329,15 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
         ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm mb-4" 
         : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 p-4 flex flex-col lg:flex-row gap-4 items-end group",
       depth > 0 && isGroup && "ml-4 md:ml-8",
-      isBottleneck && "ring-2 ring-red-500 dark:ring-red-600 shadow-lg shadow-red-500/10"
+      isBottleneck && "ring-2 ring-red-500 dark:ring-red-600 shadow-lg shadow-red-500/10",
+      isFailed && "ring-2 ring-red-600 bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-900 shadow-xl shadow-red-500/20"
     )}>
+      {isFailed && (
+        <div className="absolute -top-2 -left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
+          <Skull className="w-2 h-2" />
+          CRASHED
+        </div>
+      )}
       {isBottleneck && (
         <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
           <AlertTriangle className="w-2 h-2" />
@@ -384,6 +393,21 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 {item.isOptional ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                 <span className="text-[10px] font-bold uppercase">{item.isOptional ? 'Optional' : 'Critical'}</span>
               </button>
+              {chaosMode && (
+                <button
+                  onClick={() => onUpdate(item.id, { isFailed: !item.isFailed })}
+                  className={cn(
+                    "p-1.5 rounded-lg border transition-all flex items-center gap-2",
+                    isFailed 
+                      ? "bg-red-600 border-red-700 text-white" 
+                      : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
+                  )}
+                  title={isFailed ? "Restore Group" : "Fail Group"}
+                >
+                  {isFailed ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
+                  <span className="text-[10px] font-bold uppercase">{isFailed ? 'Restore' : 'Fail'}</span>
+                </button>
+              )}
               <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                 <button
                   onClick={() => onUpdate(item.id, { config: 'series' })}
@@ -467,6 +491,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 onAddChild={onAddChild}
                 depth={depth + 1}
                 bottleneckIds={bottleneckIds}
+                chaosMode={chaosMode}
               />
             ))}
             <div className="flex gap-2">
@@ -668,15 +693,16 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       type: 'group',
       config: 'series',
       children: [
-        { id: 'dns', name: 'Route53 DNS', type: 'component', sla: 100, replicas: 1, notes: "AWS provides 100% SLA for Route53 DNS." },
-        { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1, notes: "Includes edge locations and global delivery." },
+        { id: 'dns', name: 'Route53 DNS', type: 'component', sla: 100, replicas: 1, notes: "AWS provides 100% SLA for Route53 DNS.", mttr: 5 },
+        { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1, notes: "Includes edge locations and global delivery.", mttr: 45 },
         { 
           id: 'frontend', 
           name: 'Frontend Assets (S3)', 
           type: 'component', 
           sla: 99.9, 
           replicas: 1,
-          notes: "Static hosting in US-East-1."
+          notes: "Static hosting in US-East-1.",
+          mttr: 60
         },
         {
           id: 'backend',
@@ -685,9 +711,9 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'series',
           notes: "Core transactional path.",
           children: [
-            { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 1 },
-            { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 1 },
-            { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1, notes: "Global tables with multi-region replication." },
+            { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 1, mttr: 15 },
+            { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 1, mttr: 10 },
+            { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1, notes: "Global tables with multi-region replication.", mttr: 5 },
           ]
         },
         { 
@@ -697,7 +723,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           sla: 99.9, 
           replicas: 1,
           isOptional: true,
-          notes: "Non-critical tracking. System remains functional if this fails."
+          notes: "Non-critical tracking. System remains functional if this fails.",
+          mttr: 30
         },
       ]
     }
@@ -718,7 +745,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'component', 
           sla: 99.95, 
           replicas: 1,
-          notes: "Single-instance SLA for RDS."
+          notes: "Single-instance SLA for RDS.",
+          mttr: 60
         },
         { 
           id: 'standby', 
@@ -726,7 +754,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'component', 
           sla: 99.95, 
           replicas: 1,
-          notes: "Synchronous replication enabled."
+          notes: "Synchronous replication enabled.",
+          mttr: 60
         },
         { 
           id: 'backup', 
@@ -735,7 +764,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           sla: 99.9, 
           replicas: 1,
           isOptional: true,
-          notes: "Daily snapshots. RTO: 4 hours."
+          notes: "Daily snapshots. RTO: 4 hours.",
+          mttr: 240
         },
       ]
     }
@@ -757,8 +787,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           failoverSla: 99.999,
           notes: "Dual utility feeds with automatic ATS.",
           children: [
-            { id: 'grid', name: 'Utility Grid', type: 'component', sla: 99.9, replicas: 1, notes: "Reliability of local municipality feed." },
-            { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2, notes: "N+1 configuration with 48h fuel supply." },
+            { id: 'grid', name: 'Utility Grid', type: 'component', sla: 99.9, replicas: 1, notes: "Reliability of local municipality feed.", mttr: 120 },
+            { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2, notes: "N+1 configuration with 48h fuel supply.", mttr: 15 },
           ]
         },
         {
@@ -768,8 +798,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'parallel',
           notes: "Maintained at 22°C +/- 2°C.",
           children: [
-            { id: 'chiller-1', name: 'Chiller A', type: 'component', sla: 99.5, replicas: 1 },
-            { id: 'chiller-2', name: 'Chiller B', type: 'component', sla: 99.5, replicas: 1 },
+            { id: 'chiller-1', name: 'Chiller A', type: 'component', sla: 99.5, replicas: 1, mttr: 180 },
+            { id: 'chiller-2', name: 'Chiller B', type: 'component', sla: 99.5, replicas: 1, mttr: 180 },
           ]
         },
         {
@@ -779,8 +809,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'series',
           notes: "Fully redundant 100G core.",
           children: [
-            { id: 'edge-router', name: 'Border Routers', type: 'component', sla: 99.99, replicas: 2 },
-            { id: 'core-switch', name: 'Core Switches', type: 'component', sla: 99.99, replicas: 2 },
+            { id: 'edge-router', name: 'Border Routers', type: 'component', sla: 99.99, replicas: 2, mttr: 30 },
+            { id: 'core-switch', name: 'Core Switches', type: 'component', sla: 99.99, replicas: 2, mttr: 30 },
           ]
         },
         {
@@ -790,8 +820,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'parallel',
           notes: "Virtualized workload clusters.",
           children: [
-            { id: 'rack-1', name: 'Rack A (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1 },
-            { id: 'rack-2', name: 'Rack B (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1 },
+            { id: 'rack-1', name: 'Rack A (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1, mttr: 120 },
+            { id: 'rack-2', name: 'Rack B (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1, mttr: 120 },
           ]
         }
       ]
@@ -806,7 +836,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       config: 'series',
       notes: "Multi-region active-active deployment.",
       children: [
-        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 100, replicas: 1, notes: "Global entry point." },
+        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 100, replicas: 1, notes: "Global entry point.", mttr: 5 },
         {
           id: 'regions',
           name: 'Regional Deployments',
@@ -815,12 +845,12 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           failoverSla: 99.9,
           notes: "Automatic failover between regions.",
           children: [
-            { id: 'us-east', name: 'US-East Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Northern Virginia cluster." },
-            { id: 'eu-west', name: 'EU-West Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Ireland cluster." },
-            { id: 'ap-south', name: 'AP-South Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Mumbai cluster." },
+            { id: 'us-east', name: 'US-East Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Northern Virginia cluster.", mttr: 30 },
+            { id: 'eu-west', name: 'EU-West Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Ireland cluster.", mttr: 30 },
+            { id: 'ap-south', name: 'AP-South Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Mumbai cluster.", mttr: 30 },
           ]
         },
-        { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1, notes: "Storage-level cross-region replication." },
+        { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1, notes: "Storage-level cross-region replication.", mttr: 10 },
       ]
     }
   }
@@ -1000,6 +1030,7 @@ export default function SLACalculator() {
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('vertical');
   const [darkMode, setDarkMode] = useState(false);
+  const [chaosMode, setChaosMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
@@ -1164,6 +1195,22 @@ export default function SLACalculator() {
           <div className="flex items-center gap-2">
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
               <button
+                onClick={() => setChaosMode(!chaosMode)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                  chaosMode ? "bg-red-600 text-white shadow-md animate-pulse" : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                )}
+                title="Toggle Chaos Mode (Simulate Failures)"
+              >
+                {chaosMode ? <Flame className="w-4 h-4" /> : <Skull className="w-4 h-4" />}
+                Chaos
+              </button>
+            </div>
+
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <button
                 onClick={() => setView('list')}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
@@ -1323,9 +1370,16 @@ export default function SLACalculator() {
                 onAddChild={onAddChild} 
                 depth={0} 
                 bottleneckIds={bottleneck.ids}
+                chaosMode={chaosMode}
               />
             ) : (
-              <TopologyView root={root} bottleneckIds={bottleneck.ids} layout={topologyLayout} />
+              <TopologyView 
+                root={root} 
+                bottleneckIds={bottleneck.ids} 
+                layout={topologyLayout} 
+                chaosMode={chaosMode}
+                onUpdate={onUpdate}
+              />
             )}
           </div>
 

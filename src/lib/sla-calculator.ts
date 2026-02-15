@@ -14,6 +14,7 @@ export interface SLAItem {
   config?: Configuration; // For groups
   failoverSla?: number; // Failover reliability for parallel groups
   isOptional?: boolean; // If true, this item doesn't count against the total SLA
+  isFailed?: boolean; // Chaos mode failure state
   children?: SLAItem[]; // For groups
   inputMode?: InputMode;
   downtimeValue?: number; // in seconds
@@ -28,6 +29,7 @@ export interface CalculationResult {
 }
 
 export const calculateSLA = (item: SLAItem): number => {
+  if (item.isFailed) return 0;
   if (item.isOptional) return 100;
   
   let baseSla = 100;
@@ -76,6 +78,7 @@ export interface ReliabilityResult {
 const YEAR_MINUTES = 365.25 * 24 * 60;
 
 export const calculateReliability = (item: SLAItem): ReliabilityResult => {
+  if (item.isFailed) return { sla: 0, frequency: 999999, mttr: item.mttr || 60 };
   if (item.isOptional) return { sla: 100, frequency: 0, mttr: 0 };
 
   if (item.type === 'component') {
@@ -161,6 +164,7 @@ export interface BottleneckResult {
  */
 const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => {
   if (item.id === overrideId) return 100;
+  if (item.isFailed) return 0;
   if (item.isOptional) return 100;
   
   let baseSla = 100;
