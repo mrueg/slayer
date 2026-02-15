@@ -225,7 +225,7 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: stri
   );
 };
 
-export default function TopologyView({ root, bottleneckIds }: TopologyViewProps) {
+export default function TopologyView({ root, bottleneckIds, layout }: TopologyViewProps) {
   return (
     <div className="w-full overflow-auto bg-slate-100/50 dark:bg-slate-900/20 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-inner min-h-[600px] relative group/canvas transition-colors">
       <div className="absolute top-6 left-6 flex items-center gap-2 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest bg-white/80 dark:bg-slate-800/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 z-20">
