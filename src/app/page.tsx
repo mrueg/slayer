@@ -152,7 +152,6 @@ const CloudCatalogPicker: React.FC<{ onSelect: (service: typeof CLOUD_CATALOG[0]
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">
-                    {/* Fallback to simple icon */}
                     {ICON_MAP[service.icon as keyof typeof ICON_MAP] ? 
                       React.createElement(ICON_MAP[service.icon as keyof typeof ICON_MAP], { className: "w-4 h-4" }) : 
                       <Cloud className="w-4 h-4" />
@@ -355,7 +354,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           DEGRADED ({failed}/{replicas})
         </div>
       )}
-      {isBottleneck && (
+      {isBottleneck && !isDown && !isDegraded && (
         <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
           <AlertTriangle className="w-2 h-2" />
           SYSTEM BOTTLENECK
@@ -456,6 +455,53 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
                   <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
                 </button>
+              )}
+              <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                <button
+                  onClick={() => onUpdate(item.id, { config: 'series' })}
+                  className={cn(
+                    "px-3 py-1 text-xs rounded-md transition-all",
+                    item.config === 'series' ? "bg-blue-600 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  )}
+                >
+                  Series
+                </button>
+                <button
+                  onClick={() => onUpdate(item.id, { config: 'parallel' })}
+                  className={cn(
+                    "px-3 py-1 text-xs rounded-md transition-all",
+                    item.config === 'parallel' ? "bg-blue-600 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  )}
+                >
+                  Parallel
+                </button>
+              </div>
+              {item.config === 'parallel' && (item.children?.length || 0) > 1 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Minimum children required to be UP for the group to be healthy">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Min UP</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={item.children?.length || 1}
+                    value={item.minChildrenRequired || 1}
+                    onChange={(e) => onUpdate(item.id, { minChildrenRequired: parseInt(e.target.value) || 1 })}
+                    className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                  />
+                </div>
+              )}
+              {item.config === 'parallel' && (item.children?.length || 0) > 1 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Probability of successful failover to secondary components">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Failover %</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={item.failoverSla ?? 100}
+                    onChange={(e) => onUpdate(item.id, { failoverSla: parseFloat(e.target.value) || 0 })}
+                    className="w-12 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                  />
+                </div>
               )}
               <button
                 onClick={() => setShowNotes(!showNotes)}
@@ -640,7 +686,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 <select
                   value={item.downtimePeriod || 'month'}
                   onChange={(e) => handleDowntimeChange(item.downtimeValue || 0, e.target.value as DowntimePeriod)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[38px] dark:text-slate-200"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[38px] dark:text-slate-200"
                 >
                   <option value="day">Day</option>
                   <option value="month">Month</option>
@@ -1027,62 +1073,121 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
 };
 
 const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const sections = [
-    {
-      title: "Reliability Engine",
-      icon: <Calculator className="w-4 h-4" />,
-      content: [
-        { label: "K-out-of-N Redundancy", text: "Support for 'Partial Failures'. Define 'Min UP' requirements (e.g. 2-out-of-3) to model systems that stay healthy at reduced capacity." },
-        { label: "Failover Reliability", text: "Parallel groups include a 'Failover %' to model the success rate of the switch mechanism itself." },
-        { label: "MTTR Modeling", text: "Input Mean Time To Recovery for components to calculate weighted system recovery times and yearly outage durations." },
-        { label: "Incident Frequency", text: "Estimated outages per year based on the statistical relationship between SLA and recovery time." }
-      ]
-    },
-    {
-      title: "Chaos & Simulation",
-      icon: <Flame className="w-4 h-4 text-orange-500" />,
-      content: [
-        { label: "Chaos Mode", text: "Interactive mode to 'Kill' specific components or groups to see real-time blast radius and system degradation." },
-        { label: "Blast Radius Heatmap", text: "Visual overlay that colors nodes based on their 'System Health Impact'—see which failures are catastrophic." },
-        { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations to show statistical variance, breach risk, and 'Bad Year' (P95) scenarios." },
-        { label: "Distribution Histogram", text: "Visual bell curve of all 10,000 simulation outcomes to understand the 'long-tail' risk of your architecture." }
-      ]
-    },
-    {
-      title: "Productivity Tools",
-      icon: <Settings className="w-4 h-4 text-blue-500" />,
-      content: [
-        { label: "Cloud SLA Catalog", text: "Searchable database of official SLAs from AWS, Azure, and GCP for one-click architectural modeling." },
-        { label: "Impact Analysis", text: "Sensitivity engine that identifies 'System Bottlenecks' where improvements yield the highest gains." },
-        { label: "Calculation Steps", text: "A 'Show Detailed Work' modal providing full mathematical transparency for both SLA and MTTR." },
-        { label: "Shareable URLs", text: "Instantly encode your entire design into a Base64 URL for instant sharing without a backend." }
-      ]
-    }
-  ];
+  const [activeTab, setActiveTab] = useState<'engine' | 'simulation' | 'controls'>('engine');
+
+  const sections = {
+    engine: [
+      {
+        title: "Reliability Engine",
+        icon: <Calculator className="w-4 h-4" />,
+        content: [
+          { label: "K-out-of-N Redundancy", text: "Support for 'Partial Failures'. Define 'Min UP' requirements (e.g. 2-out-of-3) to model systems that stay healthy at reduced capacity." },
+          { label: "Failover Reliability", text: "Parallel groups include a 'Failover %' to model the success rate of the switch mechanism itself." },
+          { label: "MTTR Modeling", text: "Input Mean Time To Recovery for components to calculate weighted system recovery times and yearly outage durations." },
+          { label: "Incident Frequency", text: "Estimated outages per year based on the statistical relationship between SLA and recovery time." }
+        ]
+      },
+      {
+        title: "Productivity Tools",
+        icon: <Settings className="w-4 h-4 text-blue-500" />,
+        content: [
+          { label: "Cloud SLA Catalog", text: "Searchable database of official SLAs from AWS, Azure, and GCP for one-click architectural modeling." },
+          { label: "Impact Analysis", text: "Sensitivity engine that identifies 'System Bottlenecks' where improvements yield the highest gains." },
+          { label: "Calculation Steps", text: "A 'Show Detailed Work' modal providing full mathematical transparency for both SLA and MTTR." },
+          { label: "Shareable URLs", text: "Instantly encode your entire design into a Base64 URL for instant sharing without a backend." }
+        ]
+      }
+    ],
+    simulation: [
+      {
+        title: "Chaos & Simulation",
+        icon: <Flame className="w-4 h-4 text-orange-500" />,
+        content: [
+          { label: "Chaos Mode", text: "Interactive mode to 'Kill' specific components or groups to see real-time blast radius and system degradation." },
+          { label: "Blast Radius Heatmap", text: "Visual overlay that colors nodes based on their 'System Health Impact'—see which failures are catastrophic." },
+          { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations to show statistical variance, breach risk, and 'Bad Year' (P95) scenarios." },
+          { label: "Distribution Histogram", text: "Visual bell curve of all 10,000 simulation outcomes to understand the 'long-tail' risk of your architecture." }
+        ]
+      }
+    ],
+    controls: [
+      {
+        title: "Node Controls",
+        icon: <Component className="w-4 h-4 text-blue-500" />,
+        content: [
+          { label: "Critical/Optional", text: "Toggle whether a component is critical. Optional items are ignored in the total SLA calculation." },
+          { label: "Breaker (Zap)", text: "Enables a Circuit Breaker. Reduces the MTTR impact by 80% by preventing hanging connections during failures." },
+          { label: "Kill / Restore", text: "In Chaos Mode, injects failures. If multiple replicas exist, you can choose how many to fail." },
+          { label: "Lookup (Search)", text: "Opens the Cloud SLA Catalog to auto-fill metrics for standard AWS/GCP/Azure services." }
+        ]
+      },
+      {
+        title: "System Controls",
+        icon: <Settings className="w-4 h-4 text-slate-500" />,
+        content: [
+          { label: "List/Topology", text: "Switch between the hierarchical editor and the visual infrastructure diagram." },
+          { label: "Horizontal/Vertical", text: "In Topology view, reorient the diagram from a Left-to-Right flow to a Top-Down tree." },
+          { label: "Chaos (Skull)", text: "Activates the failure simulation environment and the Blast Radius heatmap." }
+        ]
+      }
+    ]
+  };
 
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[32px] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20">
-              <HelpCircle className="w-6 h-6" />
+        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-6 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20">
+                <HelpCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">Slayer Documentation</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold tracking-tight uppercase opacity-70">Architecture reliability guide</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">Slayer Documentation</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-bold tracking-tight uppercase opacity-70">South of Heaven, North of Five Nines</p>
-            </div>
+            <button 
+              onClick={onClose}
+              className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <Plus className="w-8 h-8 rotate-45" />
+            </button>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          >
-            <Plus className="w-8 h-8 rotate-45" />
-          </button>
+
+          <div className="flex p-1 bg-slate-200 dark:bg-slate-800 rounded-xl self-start">
+            <button
+              onClick={() => setActiveTab('engine')}
+              className={cn(
+                "px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all",
+                activeTab === 'engine' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
+            >
+              Reliability Engine
+            </button>
+            <button
+              onClick={() => setActiveTab('simulation')}
+              className={cn(
+                "px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all",
+                activeTab === 'simulation' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
+            >
+              Chaos & Simulations
+            </button>
+            <button
+              onClick={() => setActiveTab('controls')}
+              className={cn(
+                "px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all",
+                activeTab === 'controls' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
+            >
+              Interface & Controls
+            </button>
+          </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-3 gap-8 scrollbar-hide">
-          {sections.map((section, idx) => (
+        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-8 scrollbar-hide">
+          {sections[activeTab].map((section, idx) => (
             <div key={idx} className="space-y-6">
               <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-100 dark:border-slate-800">
                 <div className="text-blue-600 dark:text-blue-400">{section.icon}</div>
@@ -1411,13 +1516,13 @@ export default function SLACalculator() {
   const [showHelp, setShowHelp] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showHistogram, setShowHistogram] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
   const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
   const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
   const [simulationResult, setSimulationResult] = useState<MonteCarloResult | null>(null);
   const [overrideTargetSla, setOverrideTargetSla] = useState<number | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [showHistogram, setShowHistogram] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
@@ -1461,17 +1566,6 @@ export default function SLACalculator() {
       setRoot(defaultSystem);
       setSimulationResult(null);
     }
-  };
-
-  const handleRunSimulation = () => {
-    setIsSimulating(true);
-    // Use setTimeout to allow the UI to show loading state
-    setTimeout(() => {
-      const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
-      const result = runMonteCarlo(reliability, target, 10000);
-      setSimulationResult(result);
-      setIsSimulating(false);
-    }, 50);
   };
 
   const handleShare = () => {
@@ -1540,6 +1634,17 @@ export default function SLACalculator() {
     e.target.value = '';
   };
 
+  const handleRunSimulation = () => {
+    setIsSimulating(true);
+    // Use setTimeout to allow the UI to show loading state
+    setTimeout(() => {
+      const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
+      const result = runMonteCarlo(reliability, target, 10000);
+      setSimulationResult(result);
+      setIsSimulating(false);
+    }, 50);
+  };
+
   const { 
     compositeSla, 
     downtime, 
@@ -1604,22 +1709,6 @@ export default function SLACalculator() {
           <div className="flex items-center gap-2">
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
               <button
-                onClick={() => setChaosMode(!chaosMode)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
-                  chaosMode ? "bg-red-600 text-white shadow-md animate-pulse" : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
-                )}
-                title="Toggle Chaos Mode (Simulate Failures)"
-              >
-                {chaosMode ? <Flame className="w-4 h-4" /> : <Skull className="w-4 h-4" />}
-                Chaos
-              </button>
-            </div>
-
-            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
-
-            <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-              <button
                 onClick={() => setView('list')}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
@@ -1665,6 +1754,22 @@ export default function SLACalculator() {
                 </button>
               </div>
             )}
+
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <button
+                onClick={() => setChaosMode(!chaosMode)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                  chaosMode ? "bg-red-600 text-white shadow-md animate-pulse" : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                )}
+                title="Toggle Chaos Mode (Simulate Failures)"
+              >
+                {chaosMode ? <Flame className="w-4 h-4" /> : <Skull className="w-4 h-4" />}
+                Chaos
+              </button>
+            </div>
 
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
 
