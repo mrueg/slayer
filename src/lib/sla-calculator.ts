@@ -57,23 +57,81 @@ export const calculateSLA = (item: SLAItem): number => {
 
 export interface BottleneckResult {
   id: string;
-  sla: number;
+  impact: number;
 }
 
-export const findBottleneck = (item: SLAItem): BottleneckResult => {
-  const currentSla = calculateSLA(item);
-  let bottleneck: BottleneckResult = { id: item.id, sla: currentSla };
-
-  if (item.type === 'group' && item.children && item.children.length > 0) {
-    for (const child of item.children) {
-      const childBottleneck = findBottleneck(child);
-      if (childBottleneck.sla < bottleneck.sla) {
-        bottleneck = childBottleneck;
+/**
+ * Calculates the SLA of an item while treating a specific ID as 100% available.
+ * Used for sensitivity analysis.
+ */
+const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => {
+  if (item.id === overrideId) return 100;
+  
+  let baseSla = 100;
+  if (item.type === 'component') {
+    baseSla = item.sla ?? 100;
+  } else {
+    const children = item.children || [];
+    if (children.length === 0) {
+      baseSla = 100;
+    } else {
+      const childSlas = children.map(child => calculateSLAWithOverride(child, overrideId));
+      if (item.config === 'series') {
+        baseSla = childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
+      } else {
+        const failureProbability = childSlas.reduce((acc, sla) => acc * (1 - sla / 100), 1);
+        baseSla = (1 - failureProbability) * 100;
       }
     }
   }
 
-  return bottleneck;
+  const replicas = item.replicas || 1;
+  if (replicas <= 1) return baseSla;
+  const failureProbability = Math.pow(1 - baseSla / 100, replicas);
+  return (1 - failureProbability) * 100;
+};
+
+const getAllItems = (item: SLAItem): SLAItem[] => {
+  let items = [item];
+  if (item.children) {
+    item.children.forEach(child => {
+      items = [...items, ...getAllItems(child)];
+    });
+  }
+  return items;
+};
+
+export const findBottleneck = (root: SLAItem): BottleneckResult => {
+  const currentRootSla = calculateSLA(root);
+  const allItems = getAllItems(root);
+  
+  let bestId = root.id;
+  let maxImpact = -1;
+  let lowestSlaAtMaxImpact = 101;
+
+  // Skip the root itself as the bottleneck candidate unless it's the only node
+  const candidates = allItems.length > 1 
+    ? allItems.filter(item => item.id !== root.id)
+    : allItems;
+
+  for (const item of candidates) {
+    const slaWithImprovement = calculateSLAWithOverride(root, item.id);
+    const impact = slaWithImprovement - currentRootSla;
+    const individualSla = calculateSLA(item);
+    
+    // Tie-breaker: if impact is the same (common in parallel groups), 
+    // pick the one with the lowest individual SLA.
+    const isSignificantImprovement = impact > maxImpact + 1e-12;
+    const isEquivalentButWorseSla = Math.abs(impact - maxImpact) < 1e-12 && individualSla < lowestSlaAtMaxImpact;
+
+    if (isSignificantImprovement || isEquivalentButWorseSla) {
+      maxImpact = impact;
+      lowestSlaAtMaxImpact = individualSla;
+      bestId = item.id;
+    }
+  }
+
+  return { id: bestId, impact: maxImpact };
 };
 
 export interface ErrorBudget {
