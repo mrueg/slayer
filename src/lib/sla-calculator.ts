@@ -16,7 +16,7 @@ export interface SLAItem {
   minChildrenRequired?: number; // For groups: min up children
   failoverSla?: number; // Failover reliability for parallel groups
   isOptional?: boolean; // If true, this item doesn't count against the total SLA
-  isFailed?: boolean; // Chaos mode failure state
+  failedReplicas?: number; // Number of replicas that are currently DOWN (Chaos Mode)
   children?: SLAItem[]; // For groups
   inputMode?: InputMode;
   downtimeValue?: number; // in seconds
@@ -62,7 +62,6 @@ const calculateKofN = (probabilities: number[], k: number): number => {
 };
 
 export const calculateSLA = (item: SLAItem): number => {
-  if (item.isFailed) return 0;
   if (item.isOptional) return 100;
   
   let baseSla = 100;
@@ -98,9 +97,13 @@ export const calculateSLA = (item: SLAItem): number => {
   // Apply redundancy (replicas) to both components and groups
   const replicas = item.replicas || 1;
   const k = item.minReplicasRequired || 1;
+  const failed = item.failedReplicas || 0;
+  const working = replicas - failed;
+
+  if (working < k) return 0;
   if (replicas <= 1) return baseSla;
 
-  return calculateKofN(Array(replicas).fill(baseSla / 100), k) * 100;
+  return calculateKofN(Array(working).fill(baseSla / 100), k) * 100;
 };
 
 export interface ReliabilityResult {
@@ -112,7 +115,6 @@ export interface ReliabilityResult {
 const YEAR_MINUTES = 365.25 * 24 * 60;
 
 export const calculateReliability = (item: SLAItem): ReliabilityResult => {
-  if (item.isFailed) return { sla: 0, frequency: 999999, mttr: item.mttr || 60 };
   if (item.isOptional) return { sla: 100, frequency: 0, mttr: 0 };
 
   if (item.type === 'component') {
@@ -120,18 +122,22 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
     const baseMttr = item.mttr || 60;
     const replicas = item.replicas || 1;
     const kRequired = item.minReplicasRequired || 1;
+    const failed = item.failedReplicas || 0;
+    const working = replicas - failed;
 
-    // Single instance metrics
+    if (working < kRequired) {
+      return { sla: 0, frequency: 999999, mttr: baseMttr };
+    }
+
     const baseFrequency = ((1 - baseSla / 100) * YEAR_MINUTES) / baseMttr;
 
     if (replicas <= 1) {
       return { sla: baseSla, frequency: baseFrequency, mttr: baseMttr };
     }
 
-    // Parallel redundancy for replicas (K-of-N approximation)
-    const sla = calculateKofN(Array(replicas).fill(baseSla / 100), kRequired) * 100;
-    const frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, replicas - kRequired) * (replicas / kRequired);
-    const mttr = baseMttr / (replicas - kRequired + 1);
+    const sla = calculateKofN(Array(working).fill(baseSla / 100), kRequired) * 100;
+    const frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, working - kRequired) * (working / kRequired);
+    const mttr = baseMttr / (working - kRequired + 1);
 
     return { sla, frequency, mttr };
   }
@@ -159,7 +165,6 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
     const probabilities = childResults.map(r => r.sla / 100);
     sla = calculateKofN(probabilities, k) * 100 * switchReliability;
 
-    // Parallel frequency approx scaled by K
     frequency = childResults.length > 1 
       ? childResults.reduce((acc, r, idx) => {
           if (idx === 0) return r.frequency;
@@ -176,14 +181,21 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
 
   const groupReplicas = item.replicas || 1;
   const gk = item.minReplicasRequired || 1;
-  if (groupReplicas > 1) {
-    const baseSla = sla;
-    const baseMttr = mttr || 60;
-    const baseFrequency = frequency || ((1 - baseSla / 100) * YEAR_MINUTES) / bMttr;
+  const gFailed = item.failedReplicas || 0;
+  const gWorking = groupReplicas - gFailed;
 
-    sla = calculateKofN(Array(groupReplicas).fill(baseSla / 100), gk) * 100;
-    frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, groupReplicas - gk) * (groupReplicas / gk);
-    mttr = baseMttr / (groupReplicas - gk + 1);
+  if (gWorking < gk) {
+    return { sla: 0, frequency: 999999, mttr: mttr || 60 };
+  }
+
+  if (groupReplicas > 1) {
+    const bSla = sla;
+    const bMttr = mttr || 60;
+    const bFreq = frequency || ((1 - bSla / 100) * YEAR_MINUTES) / bMttr;
+
+    sla = calculateKofN(Array(gWorking).fill(bSla / 100), gk) * 100;
+    frequency = bFreq * Math.pow((bFreq * bMttr) / YEAR_MINUTES, gWorking - gk) * (gWorking / gk);
+    mttr = bMttr / (gWorking - gk + 1);
   }
 
   return { sla, frequency, mttr };
@@ -200,7 +212,6 @@ export interface BottleneckResult {
  */
 const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => {
   if (item.id === overrideId) return 100;
-  if (item.isFailed) return 0;
   if (item.isOptional) return 100;
   
   let baseSla = 100;
@@ -233,9 +244,13 @@ const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => 
 
   const replicas = item.replicas || 1;
   const k = item.minReplicasRequired || 1;
+  const failed = item.failedReplicas || 0;
+  const working = replicas - failed;
+
+  if (working < k) return 0;
   if (replicas <= 1) return baseSla;
 
-  return calculateKofN(Array(replicas).fill(baseSla / 100), k) * 100;
+  return calculateKofN(Array(working).fill(baseSla / 100), k) * 100;
 };
 
 /**
@@ -243,7 +258,6 @@ const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => 
  */
 const calculateSLAWithForcedFailure = (item: SLAItem, forcedFailedId: string): number => {
   if (item.id === forcedFailedId) return 0;
-  if (item.isFailed) return 0;
   if (item.isOptional) return 100;
   
   let baseSla = 100;
@@ -276,9 +290,13 @@ const calculateSLAWithForcedFailure = (item: SLAItem, forcedFailedId: string): n
 
   const replicas = item.replicas || 1;
   const k = item.minReplicasRequired || 1;
+  const failed = item.failedReplicas || 0;
+  const working = replicas - failed;
+
+  if (working < k) return 0;
   if (replicas <= 1) return baseSla;
 
-  return calculateKofN(Array(replicas).fill(baseSla / 100), k) * 100;
+  return calculateKofN(Array(working).fill(baseSla / 100), k) * 100;
 };
 
 const getAllItems = (item: SLAItem): SLAItem[] => {
@@ -317,7 +335,8 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
     : allItems;
 
   for (const item of candidates) {
-    if (item.isFailed && !serialMap[item.id]) continue;
+    const isTotalFailure = (item.failedReplicas || 0) >= (item.replicas || 1);
+    if (isTotalFailure && !serialMap[item.id]) continue;
 
     const slaWithImprovement = calculateSLAWithOverride(root, item.id);
     const impact = slaWithImprovement - currentRootSla;
@@ -352,7 +371,8 @@ export const getBlastRadiusMap = (root: SLAItem): Record<string, number> => {
 
   allItems.forEach(item => {
     if (currentRootSla <= 0) {
-      map[item.id] = item.isFailed ? 1 : 0;
+      const isTotalFailure = (item.failedReplicas || 0) >= (item.replicas || 1);
+      map[item.id] = isTotalFailure ? 1 : 0;
       return;
     }
 

@@ -261,6 +261,71 @@ const addChildToGroup = (items: SLAItem[], groupId: string, newItem: SLAItem): S
   });
 };
 
+const KillModal: React.FC<{ item: SLAItem, onConfirm: (count: number) => void, onClose: () => void }> = ({ item, onConfirm, onClose }) => {
+  const [count, setCount] = useState(1);
+  const replicas = item.replicas || 1;
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center gap-4">
+          <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl text-red-600 dark:text-red-400">
+            <Skull className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">Chaos Injection</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Select failure magnitude for {item.name}</p>
+          </div>
+        </div>
+        
+        <div className="p-8 space-y-6">
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">How many replicas to kill?</label>
+            <div className="flex items-center gap-4">
+              <input
+                type="range"
+                min="1"
+                max={replicas}
+                value={count}
+                onChange={(e) => setCount(parseInt(e.target.value))}
+                className="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-600"
+              />
+              <span className="text-2xl font-black font-mono text-red-600 w-12 text-center">{count}</span>
+            </div>
+            <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 uppercase">
+              <span>1 Unit</span>
+              <span>{replicas} Units (Total Down)</span>
+            </div>
+          </div>
+
+          <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30">
+            <p className="text-xs leading-relaxed text-red-700 dark:text-red-400 font-medium">
+              <AlertTriangle className="w-3 h-3 inline mr-1 mb-0.5" />
+              Simulating failure of <strong>{count}</strong> out of <strong>{replicas}</strong> replicas. 
+              {count === replicas ? " This will cause a total outage for this node." : " This will put the node in a DEGRADED state."}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => onConfirm(count)}
+            className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 hover:bg-red-500 transition-all"
+          >
+            Inject Failure
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AutoExpandingTextarea: React.FC<{
   value: string;
   onChange: (value: string) => void;
@@ -311,7 +376,12 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
   const [showNotes, setShowNotes] = useState(!!item.notes);
-  const isFailed = item.isFailed;
+  const [showKillModal, setShowKillModal] = useState(false);
+  
+  const failed = item.failedReplicas || 0;
+  const replicas = item.replicas || 1;
+  const isDown = failed >= replicas;
+  const isDegraded = failed > 0 && failed < replicas;
 
   const handleModeToggle = (newMode: InputMode) => {
     onUpdate(item.id, { inputMode: newMode });
@@ -333,13 +403,20 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
         ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm mb-4" 
         : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 p-4 flex flex-col lg:flex-row gap-4 items-end group",
       depth > 0 && isGroup && "ml-4 md:ml-8",
-      isBottleneck && "ring-2 ring-red-500 dark:ring-red-600 shadow-lg shadow-red-500/10",
-      isFailed && "ring-2 ring-red-600 bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-900 shadow-xl shadow-red-500/20"
+      isBottleneck && !isDown && "ring-2 ring-red-500 dark:ring-red-600 shadow-lg shadow-red-500/10",
+      isDown && "ring-2 ring-red-600 bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-900 shadow-xl shadow-red-500/20",
+      isDegraded && "ring-2 ring-orange-500 bg-orange-50/50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-900 shadow-xl shadow-orange-500/20"
     )}>
-      {isFailed && (
+      {isDown && (
         <div className="absolute -top-2 -left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
           <Skull className="w-2 h-2" />
           DOWN
+        </div>
+      )}
+      {isDegraded && (
+        <div className="absolute -top-2 -left-2 bg-orange-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
+          <AlertTriangle className="w-2 h-2" />
+          DEGRADED ({failed}/{replicas})
         </div>
       )}
       {isBottleneck && (
@@ -423,17 +500,25 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               )}
               {chaosMode && (
                 <button
-                  onClick={() => onUpdate(item.id, { isFailed: !item.isFailed })}
+                  onClick={() => {
+                    if (isDown || isDegraded) {
+                      onUpdate(item.id, { failedReplicas: 0 });
+                    } else if (replicas > 1) {
+                      setShowKillModal(true);
+                    } else {
+                      onUpdate(item.id, { failedReplicas: 1 });
+                    }
+                  }}
                   className={cn(
                     "p-1.5 rounded-lg border transition-all flex items-center gap-2",
-                    isFailed 
+                    (isDown || isDegraded)
                       ? "bg-red-600 border-red-700 text-white" 
                       : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
                   )}
-                  title={isFailed ? "Restore Group" : "Fail Group"}
+                  title={isDown || isDegraded ? "Restore Group" : "Fail Group"}
                 >
-                  {isFailed ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
-                  <span className="text-[10px] font-bold uppercase">{isFailed ? 'Restore' : 'Kill'}</span>
+                  {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
+                  <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
                 </button>
               )}
               <button
@@ -651,17 +736,25 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           )}
           {chaosMode && (
             <button
-              onClick={() => onUpdate(item.id, { isFailed: !item.isFailed })}
+              onClick={() => {
+                if (isDown || isDegraded) {
+                  onUpdate(item.id, { failedReplicas: 0 });
+                } else if (replicas > 1) {
+                  setShowKillModal(true);
+                } else {
+                  onUpdate(item.id, { failedReplicas: 1 });
+                }
+              }}
               className={cn(
                 "p-1.5 rounded-lg border transition-all flex items-center gap-2",
-                isFailed 
+                (isDown || isDegraded)
                   ? "bg-red-600 border-red-700 text-white" 
                   : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
               )}
-              title={isFailed ? "Restore Component" : "Fail Component"}
+              title={isDown || isDegraded ? "Restore Component" : "Fail Component"}
             >
-              {isFailed ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
-              <span className="text-[10px] font-bold uppercase">{isFailed ? 'Restore' : 'Kill'}</span>
+              {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
+              <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
             </button>
           )}
           <button
@@ -691,6 +784,17 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             className="text-xs text-slate-600 dark:text-slate-400 placeholder:text-slate-400 dark:placeholder:text-slate-600 font-medium"
           />
         </div>
+      )}
+
+      {showKillModal && (
+        <KillModal 
+          item={item} 
+          onClose={() => setShowKillModal(false)}
+          onConfirm={(failedCount) => {
+            onUpdate(item.id, { failedReplicas: failedCount });
+            setShowKillModal(false);
+          }}
+        />
       )}
     </div>
   );
@@ -723,8 +827,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'series',
           notes: "Core transactional path.",
           children: [
-            { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 1, mttr: 15 },
-            { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 1, mttr: 10 },
+            { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 2, minReplicasRequired: 1, mttr: 15 },
+            { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 3, minReplicasRequired: 2, mttr: 10 },
             { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1, notes: "Global tables with multi-region replication.", mttr: 5 },
           ]
         },
