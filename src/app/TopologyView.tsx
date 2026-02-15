@@ -6,6 +6,12 @@ import {
   Layers, Component, Zap, Shield, Database, Globe, MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Server, ZapOff, HardDrive, Cpu, Network,
   Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Activity
 } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface TopologyViewProps {
   root: SLAItem;
