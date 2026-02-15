@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -742,6 +742,7 @@ export default function SLACalculator() {
 
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
+  const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('horizontal');
   const [darkMode, setDarkMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -927,6 +928,31 @@ export default function SLACalculator() {
               </button>
             </div>
 
+            {view === 'topology' && (
+              <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm animate-in fade-in zoom-in-95 duration-200">
+                <button
+                  onClick={() => setTopologyLayout('horizontal')}
+                  className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    topologyLayout === 'horizontal' ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  )}
+                  title="Horizontal Layout"
+                >
+                  <Columns className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setTopologyLayout('vertical')}
+                  className={cn(
+                    "p-1.5 rounded-md transition-all",
+                    topologyLayout === 'vertical' ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  )}
+                  title="Vertical Layout"
+                >
+                  <Rows className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
 
             <div className="flex items-center gap-1">
@@ -1042,7 +1068,7 @@ export default function SLACalculator() {
                 bottleneckIds={bottleneck.ids}
               />
             ) : (
-              <TopologyView root={root} bottleneckIds={bottleneck.ids} />
+              <TopologyView root={root} bottleneckIds={bottleneck.ids} layout={topologyLayout} />
             )}
           </div>
 

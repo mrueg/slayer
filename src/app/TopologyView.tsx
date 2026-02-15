@@ -16,6 +16,7 @@ function cn(...inputs: ClassValue[]) {
 interface TopologyViewProps {
   root: SLAItem;
   bottleneckIds: string[];
+  layout: 'horizontal' | 'vertical';
 }
 
 const ICON_MAP = {
@@ -65,24 +66,34 @@ const getIcon = (item: SLAItem) => {
   return <Component className="w-4 h-4 text-slate-400" />;
 };
 
-const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: string[] }> = ({ 
+const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: string[]; layout: 'horizontal' | 'vertical' }> = ({ 
   item, 
   depth,
-  bottleneckIds
+  bottleneckIds,
+  layout
 }) => {
   const isGroup = item.type === 'group';
   const sla = calculateSLA(item);
   const isBottleneck = bottleneckIds.includes(item.id);
   const isOptional = item.isOptional;
 
+  const isVertical = layout === 'vertical';
+
   return (
-    <div className="flex items-center">
+    <div className={cn(
+      "flex items-center",
+      isVertical ? "flex-col" : "flex-row"
+    )}>
       {/* Node Card */}
-      <div className="relative group flex items-center">
-        {/* Left connector from parent */}
+      <div className={cn(
+        "relative group flex items-center",
+        isVertical ? "flex-col" : "flex-row"
+      )}>
+        {/* Left/Top connector from parent */}
         {depth > 0 && (
           <div className={cn(
-            "w-10 h-[2px] flex-shrink-0",
+            isVertical ? "w-[2px] h-10" : "w-10 h-[2px]",
+            "flex-shrink-0",
             isOptional ? "bg-slate-200 dark:bg-slate-800" : "bg-slate-300 dark:bg-slate-700"
           )} />
         )}
@@ -155,14 +166,23 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: stri
           </div>
         </div>
 
-        {/* Right connector to children */}
+        {/* Right/Bottom connector to children */}
         {isGroup && item.children && item.children.length > 0 && (
-          <div className="w-10 h-[2px] bg-slate-300 dark:bg-slate-700 flex-shrink-0 relative">
-            <div className="absolute left-1/2 -translate-x-1/2 -top-3 text-[8px] font-black bg-white dark:bg-slate-800 px-1 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 rounded uppercase z-20 whitespace-nowrap">
+          <div className={cn(
+            "flex-shrink-0 relative",
+            isVertical ? "w-[2px] h-10 bg-slate-300 dark:bg-slate-700" : "w-10 h-[2px] bg-slate-300 dark:bg-slate-700"
+          )}>
+            <div className={cn(
+              "absolute text-[8px] font-black bg-white dark:bg-slate-800 px-1 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 rounded uppercase z-20 whitespace-nowrap",
+              isVertical ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" : "left-1/2 -translate-x-1/2 -top-3"
+            )}>
               {item.config}
             </div>
             {item.config === 'parallel' && (item.children?.length || 0) > 1 && (item.failoverSla ?? 100) < 100 && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-1.5 flex items-center gap-1 text-[7px] font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-1 rounded border border-amber-100 dark:border-amber-900/30 whitespace-nowrap z-20">
+              <div className={cn(
+                "absolute flex items-center gap-1 text-[7px] font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-1 rounded border border-amber-100 dark:border-amber-900/30 whitespace-nowrap z-20",
+                isVertical ? "top-1/2 left-4 -translate-y-1/2" : "left-1/2 -translate-x-1/2 top-1.5"
+              )}>
                 <ToggleRight className="w-2 h-2" />
                 SWITCH: {item.failoverSla}%
               </div>
@@ -173,11 +193,22 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: stri
 
       {/* Children Container */}
       {isGroup && item.children && item.children.length > 0 && (
-        <div className="flex flex-col gap-6 relative">
-          {/* Vertical line connecting children */}
+        <div className={cn(
+          "flex relative",
+          isVertical ? "flex-row gap-8 pt-4" : "flex-col gap-6 ml-0"
+        )}>
+          {/* Connector line connecting children */}
           {item.children.length > 1 && (
-            <div className="absolute top-0 bottom-0 left-0 w-[2px] bg-slate-300 dark:bg-slate-700 my-auto" 
-                 style={{ height: 'calc(100% - 60px)' }} />
+            <div className={cn(
+              "absolute bg-slate-300 dark:bg-slate-700",
+              isVertical 
+                ? "top-0 left-0 right-0 h-[2px] mx-auto" 
+                : "top-0 bottom-0 left-0 w-[2px] my-auto"
+            )} 
+            style={isVertical 
+              ? { width: 'calc(100% - 220px)', top: '0' } 
+              : { height: 'calc(100% - 60px)' }
+            } />
           )}
           {item.children.map((child) => (
             <TopologyNode 
@@ -185,12 +216,14 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: stri
               item={child} 
               depth={depth + 1}
               bottleneckIds={bottleneckIds}
+              layout={layout}
             />
           ))}
         </div>
       )}
     </div>
   );
+};
 };
 
 export default function TopologyView({ root, bottleneckIds }: TopologyViewProps) {
@@ -201,7 +234,7 @@ export default function TopologyView({ root, bottleneckIds }: TopologyViewProps)
         Interactive Topology Map
       </div>
       <div className="p-24 min-w-max flex items-center justify-center min-h-full">
-        <TopologyNode item={root} depth={0} bottleneckIds={bottleneckIds} />
+        <TopologyNode item={root} depth={0} bottleneckIds={bottleneckIds} layout={layout} />
       </div>
       
       {/* Background Grid */}
