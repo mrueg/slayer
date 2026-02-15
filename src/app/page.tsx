@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload } from 'lucide-react';
 import { 
   SLAItem, 
   calculateSLA, 
@@ -350,6 +350,7 @@ export default function SLACalculator() {
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [darkMode, setDarkMode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (darkMode) {
@@ -375,6 +376,40 @@ export default function SLACalculator() {
         children: []
       });
     }
+  };
+
+  const handleExport = () => {
+    const data = JSON.stringify(root, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `slayer-config-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        // Basic validation: check if it has an id and type
+        if (json.id && json.type) {
+          setRoot(json);
+        } else {
+          alert('Invalid SLAYER configuration file.');
+        }
+      } catch (err) {
+        alert('Failed to parse JSON file.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    e.target.value = '';
   };
 
   const compositeSla = useMemo(() => calculateSLA(root), [root]);
@@ -450,6 +485,30 @@ export default function SLACalculator() {
             </div>
             <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2" />
             <div className="flex gap-2">
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+              title="Export configuration to JSON"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+              title="Import configuration from JSON"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleImport} 
+              accept=".json" 
+              className="hidden" 
+            />
+            <div className="w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
             <button 
               onClick={handleReset}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
