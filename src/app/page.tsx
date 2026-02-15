@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Info, Calculator, Layers, Share2, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent } from 'lucide-react';
+import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List } from 'lucide-react';
 import { 
   SLAItem, 
-  Configuration, 
   calculateSLA, 
   getDowntime, 
   formatDuration,
@@ -13,6 +12,7 @@ import {
   DowntimePeriod,
   InputMode
 } from '@/lib/sla-calculator';
+import TopologyView from './TopologyView';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -326,6 +326,7 @@ export default function SLACalculator() {
   };
 
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
+  const [view, setView] = useState<'list' | 'topology'>('list');
 
   const handleReset = () => {
     if (confirm('Reset to default example?')) {
@@ -386,7 +387,31 @@ export default function SLACalculator() {
             </h1>
             <p className="text-slate-500 mt-1 font-bold italic tracking-wide">Raining Blood (and Uptime)</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-4">
+            <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+              <button
+                onClick={() => setView('list')}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                  view === 'list' ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                <List className="w-4 h-4" />
+                List
+              </button>
+              <button
+                onClick={() => setView('topology')}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                  view === 'topology' ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                <Network className="w-4 h-4" />
+                Topology
+              </button>
+            </div>
+            <div className="h-8 w-[1px] bg-slate-200 mx-2" />
+            <div className="flex gap-2">
             <button 
               onClick={handleReset}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
@@ -402,17 +427,22 @@ export default function SLACalculator() {
               Clear All
             </button>
           </div>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <ItemNode 
-              item={root} 
-              onUpdate={onUpdate} 
-              onRemove={onRemove} 
-              onAddChild={onAddChild} 
-              depth={0} 
-            />
+            {view === 'list' ? (
+              <ItemNode 
+                item={root} 
+                onUpdate={onUpdate} 
+                onRemove={onRemove} 
+                onAddChild={onAddChild} 
+                depth={0} 
+              />
+            ) : (
+              <TopologyView root={root} />
+            )}
           </div>
 
           <div className="space-y-6">
