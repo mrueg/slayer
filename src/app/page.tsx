@@ -755,15 +755,27 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                 
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">{step.explanation}</p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                     <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Formula</span>
                     <code className="text-xs font-mono text-indigo-600 dark:text-indigo-400 break-all">{step.formula}</code>
                   </div>
                   <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Result</span>
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Result SLA</span>
                     <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
                       {formatSLAPercentage(step.result)}%
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">System MTTR</span>
+                    <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
+                      {formatDuration(step.mttrResult || 0)}
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Est. Frequency</span>
+                    <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
+                      {(step.frequencyResult || 0).toFixed(2)}/yr
                     </span>
                   </div>
                 </div>
