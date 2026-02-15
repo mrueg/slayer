@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -28,6 +28,28 @@ import { twMerge } from 'tailwind-merge';
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+const CLOUD_CATALOG = [
+  { provider: 'AWS', name: 'S3 (Standard)', sla: 99.9, mttr: 120, icon: 'hardDrive' },
+  { provider: 'AWS', name: 'Lambda', sla: 99.95, mttr: 15, icon: 'zap' },
+  { provider: 'AWS', name: 'RDS (Multi-AZ)', sla: 99.95, mttr: 60, icon: 'database' },
+  { provider: 'AWS', name: 'DynamoDB (Standard)', sla: 99.9, mttr: 20, icon: 'database' },
+  { provider: 'AWS', name: 'DynamoDB (Global Tables)', sla: 99.999, mttr: 10, icon: 'database' },
+  { provider: 'AWS', name: 'EC2 (Instance)', sla: 99.5, mttr: 60, icon: 'server' },
+  { provider: 'AWS', name: 'Route53 (DNS)', sla: 100, mttr: 0, icon: 'globe' },
+  { provider: 'AWS', name: 'CloudFront (CDN)', sla: 99.9, mttr: 45, icon: 'globe' },
+  { provider: 'AWS', name: 'API Gateway', sla: 99.95, mttr: 15, icon: 'zap' },
+  { provider: 'Azure', name: 'SQL Database', sla: 99.99, mttr: 30, icon: 'database' },
+  { provider: 'Azure', name: 'App Service', sla: 99.95, mttr: 45, icon: 'cloud' },
+  { provider: 'Azure', name: 'Cosmos DB', sla: 99.999, mttr: 10, icon: 'database' },
+  { provider: 'Azure', name: 'Virtual Machines', sla: 99.9, mttr: 60, icon: 'server' },
+  { provider: 'GCP', name: 'Compute Engine', sla: 99.9, mttr: 60, icon: 'server' },
+  { provider: 'GCP', name: 'Cloud Storage', sla: 99.9, mttr: 90, icon: 'hardDrive' },
+  { provider: 'GCP', name: 'Cloud Spanner', sla: 99.999, mttr: 10, icon: 'database' },
+  { provider: 'GCP', name: 'BigQuery', sla: 99.9, mttr: 60, icon: 'database' },
+  { provider: 'Cloudflare', name: 'Edge Workers', sla: 99.99, mttr: 5, icon: 'zap' },
+  { provider: 'Cloudflare', name: 'KV Storage', sla: 99.99, mttr: 10, icon: 'database' },
+];
 
 const ICON_MAP = {
   layers: Layers,
@@ -74,6 +96,84 @@ const getIcon = (item: SLAItem) => {
   if (name.includes('storage') || name.includes('s3') || name.includes('disk')) return <HardDrive className="w-4 h-4" />;
   if (name.includes('compute') || name.includes('cpu') || name.includes('node')) return <Cpu className="w-4 h-4" />;
   return <Component className="w-4 h-4" />;
+};
+
+const CloudCatalogPicker: React.FC<{ onSelect: (service: typeof CLOUD_CATALOG[0]) => void }> = ({ onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  
+  const filtered = CLOUD_CATALOG.filter(s => 
+    s.name.toLowerCase().includes(search.toLowerCase()) || 
+    s.provider.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-all shadow-sm flex items-center gap-2"
+        title="Lookup Cloud SLA Catalog"
+      >
+        <Search className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-bold uppercase hidden sm:inline">Lookup</span>
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full mt-2 right-0 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-[150] overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col max-h-[400px]">
+          <div className="p-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                autoFocus
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search AWS, Azure, GCP..."
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all dark:text-white"
+              />
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto py-2">
+            {filtered.map((service, idx) => (
+              <button
+                key={`${service.provider}-${service.name}-${idx}`}
+                onClick={() => {
+                  onSelect(service);
+                  setIsOpen(false);
+                  setSearch('');
+                }}
+                className="w-full px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-white dark:group-hover:bg-slate-600 transition-colors">
+                    {/* Fallback to simple icon */}
+                    {ICON_MAP[service.icon as keyof typeof ICON_MAP] ? 
+                      React.createElement(ICON_MAP[service.icon as keyof typeof ICON_MAP], { className: "w-4 h-4" }) : 
+                      <Cloud className="w-4 h-4" />
+                    }
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-black text-slate-900 dark:text-white">{service.name}</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{service.provider}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400">{service.sla}%</div>
+                  <div className="text-[9px] font-medium text-slate-400">{service.mttr}m MTTR</div>
+                </div>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-xs italic">
+                No matching cloud services found.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const IconPicker: React.FC<{ current: string | undefined, onSelect: (name: string) => void }> = ({ current, onSelect }) => {
@@ -409,6 +509,14 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   "w-full bg-transparent border-b py-1 outline-none transition-all text-sm",
                   item.isOptional ? "text-slate-400 dark:text-slate-600 italic line-through border-transparent" : "text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 focus:border-blue-500"
                 )}
+              />
+              <CloudCatalogPicker 
+                onSelect={(service) => onUpdate(item.id, { 
+                  name: service.name, 
+                  sla: service.sla, 
+                  mttr: service.mttr, 
+                  icon: service.icon 
+                })} 
               />
             </div>
           </div>
