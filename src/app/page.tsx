@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload } from 'lucide-react';
+import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library } from 'lucide-react';
 import { 
   SLAItem, 
   calculateSLA, 
@@ -11,7 +11,8 @@ import {
   formatSLAPercentage,
   DowntimePeriod,
   InputMode,
-  findBottleneck
+  findBottleneck,
+  calculateErrorBudget
 } from '@/lib/sla-calculator';
 import TopologyView from './TopologyView';
 import { clsx, type ClassValue } from 'clsx';
@@ -288,6 +289,64 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
   );
 };
 
+const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
+  serverless: {
+    name: "Serverless Web App",
+    data: {
+      id: 'root',
+      name: 'Serverless Stack',
+      type: 'group',
+      config: 'series',
+      children: [
+        { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1 },
+        { id: 's3', name: 'S3 Static Assets', type: 'component', sla: 99.99, replicas: 1 },
+        { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 1 },
+        { id: 'lambda', name: 'Lambda Functions', type: 'component', sla: 99.95, replicas: 1 },
+        { id: 'dynamo', name: 'DynamoDB', type: 'component', sla: 99.99, replicas: 1 },
+      ]
+    }
+  },
+  multi_az: {
+    name: "Multi-AZ Database",
+    data: {
+      id: 'root',
+      name: 'High Availability DB',
+      type: 'group',
+      config: 'parallel',
+      children: [
+        { id: 'az-1', name: 'AZ-1 Primary Instance', type: 'component', sla: 99.95, replicas: 1 },
+        { id: 'az-2', name: 'AZ-2 Standby Instance', type: 'component', sla: 99.95, replicas: 1 },
+        { id: 'witness', name: 'Quorum Witness', type: 'component', sla: 99.9, replicas: 1 },
+      ]
+    }
+  },
+  global_api: {
+    name: "Edge-First Global API",
+    data: {
+      id: 'root',
+      name: 'Global API Architecture',
+      type: 'group',
+      config: 'series',
+      children: [
+        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 99.99, replicas: 1 },
+        {
+          id: 'regions',
+          name: 'Regional Deployments',
+          type: 'group',
+          config: 'parallel',
+          replicas: 1,
+          children: [
+            { id: 'us-east', name: 'US-East Region', type: 'component', sla: 99.9, replicas: 1 },
+            { id: 'eu-west', name: 'EU-West Region', type: 'component', sla: 99.9, replicas: 1 },
+            { id: 'ap-south', name: 'AP-South Region', type: 'component', sla: 99.9, replicas: 1 },
+          ]
+        },
+        { id: 'global-db', name: 'Global Replicated DB', type: 'component', sla: 99.99, replicas: 1 },
+      ]
+    }
+  }
+};
+
 export default function SLACalculator() {
   const defaultSystem: SLAItem = {
     id: 'root',
@@ -350,7 +409,11 @@ export default function SLACalculator() {
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [darkMode, setDarkMode] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
+  const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const templateRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (darkMode) {
@@ -360,9 +423,26 @@ export default function SLACalculator() {
     }
   }, [darkMode]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (templateRef.current && !templateRef.current.contains(event.target as Node)) {
+        setShowTemplates(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleReset = () => {
     if (confirm('Reset to default example?')) {
       setRoot(defaultSystem);
+    }
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    if (confirm(`Load the "${TEMPLATES[templateId].name}" template? This will replace your current work.`)) {
+      setRoot(TEMPLATES[templateId].data);
+      setShowTemplates(false);
     }
   };
 
@@ -415,6 +495,10 @@ export default function SLACalculator() {
   const compositeSla = useMemo(() => calculateSLA(root), [root]);
   const downtime = useMemo(() => getDowntime(compositeSla), [compositeSla]);
   const bottleneck = useMemo(() => findBottleneck(root), [root]);
+  const errorBudget = useMemo(() => 
+    calculateErrorBudget(compositeSla, consumedDowntime, budgetPeriod),
+    [compositeSla, consumedDowntime, budgetPeriod]
+  );
 
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
     if (id === 'root') {
@@ -485,6 +569,33 @@ export default function SLACalculator() {
             </div>
             <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2" />
             <div className="flex gap-2">
+            <div className="relative" ref={templateRef}>
+              <button 
+                onClick={() => setShowTemplates(!showTemplates)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+              >
+                <Library className="w-4 h-4" />
+                Templates
+                <ChevronDown className={cn("w-3 h-3 transition-transform", showTemplates && "rotate-180")} />
+              </button>
+              
+              {showTemplates && (
+                <div className="absolute top-full mt-2 left-0 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-3 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 mb-1">
+                    Architecture Patterns
+                  </div>
+                  {Object.entries(TEMPLATES).map(([id, template]) => (
+                    <button
+                      key={id}
+                      onClick={() => handleLoadTemplate(id)}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex flex-col"
+                    >
+                      <span className="font-bold">{template.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button 
               onClick={handleExport}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
@@ -576,6 +687,66 @@ export default function SLACalculator() {
                     <p>• Series: Components depend on each other.</p>
                     <p>• Parallel: Components provide redundancy.</p>
                   </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm sticky top-[480px]">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="w-4 h-4 text-blue-500" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget Calculator</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (sec)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={consumedDowntime}
+                      onChange={(e) => setConsumedDowntime(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Period</label>
+                    <select
+                      value={budgetPeriod}
+                      onChange={(e) => setBudgetPeriod(e.target.value as DowntimePeriod)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[34px] dark:text-slate-200"
+                    >
+                      <option value="day">Day</option>
+                      <option value="month">Month</option>
+                      <option value="year">Year</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Remaining Budget</span>
+                    <span className={cn(
+                      "font-mono font-bold text-sm",
+                      errorBudget.isBreached ? "text-red-500" : "text-emerald-500"
+                    )}>
+                      {errorBudget.isBreached ? "BREACHED" : formatDuration(errorBudget.remainingSeconds / 60)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full transition-all duration-500",
+                        errorBudget.isBreached ? "bg-red-500" : "bg-emerald-500"
+                      )}
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, (errorBudget.remainingSeconds / errorBudget.totalBudgetSeconds) * 100))}%` 
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 italic">
+                    Total {budgetPeriod}ly budget: {formatDuration(errorBudget.totalBudgetSeconds / 60)}
+                  </p>
                 </div>
               </div>
             </section>

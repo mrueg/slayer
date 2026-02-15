@@ -76,6 +76,31 @@ export const findBottleneck = (item: SLAItem): BottleneckResult => {
   return bottleneck;
 };
 
+export interface ErrorBudget {
+  totalBudgetSeconds: number;
+  consumedSeconds: number;
+  remainingSeconds: number;
+  isBreached: boolean;
+}
+
+export const calculateErrorBudget = (targetSla: number, consumedSeconds: number, period: DowntimePeriod = 'month'): ErrorBudget => {
+  const totalSeconds = {
+    year: 365.25 * 24 * 60 * 60,
+    month: (365.25 * 24 * 60 * 60) / 12,
+    day: 24 * 60 * 60,
+  }[period];
+
+  const totalBudgetSeconds = totalSeconds * (1 - targetSla / 100);
+  const remainingSeconds = totalBudgetSeconds - consumedSeconds;
+  
+  return {
+    totalBudgetSeconds,
+    consumedSeconds,
+    remainingSeconds: Math.max(0, remainingSeconds),
+    isBreached: remainingSeconds < 0
+  };
+};
+
 export const formatSLAPercentage = (value: number): string => {
   if (value >= 100) return '100';
   if (value <= 0) return '0';
