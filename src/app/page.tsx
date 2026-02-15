@@ -408,6 +408,19 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
                 />
               </div>
+              {(item.replicas || 1) > 1 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Minimum group replicas required to be healthy">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Min UP</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={item.replicas || 1}
+                    value={item.minReplicasRequired || 1}
+                    onChange={(e) => onUpdate(item.id, { minReplicasRequired: parseInt(e.target.value) || 1 })}
+                    className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                  />
+                </div>
+              )}
               {chaosMode && (
                 <button
                   onClick={() => onUpdate(item.id, { isFailed: !item.isFailed })}
@@ -622,6 +635,20 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
             />
           </div>
+          {(item.replicas || 1) > 1 && (
+            <div className="w-full lg:w-20">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Min UP</label>
+              <input
+                type="number"
+                min="1"
+                max={item.replicas || 1}
+                value={item.minReplicasRequired || 1}
+                onChange={(e) => onUpdate(item.id, { minReplicasRequired: parseInt(e.target.value) || 1 })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                title="Minimum replicas required to be healthy"
+              />
+            </div>
+          )}
           {chaosMode && (
             <button
               onClick={() => onUpdate(item.id, { isFailed: !item.isFailed })}
