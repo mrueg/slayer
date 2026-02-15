@@ -409,53 +409,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 {item.isOptional ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                 <span className="text-[10px] font-bold uppercase">{item.isOptional ? 'Optional' : 'Critical'}</span>
               </button>
-              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Replicas</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="99"
-                  value={item.replicas || 1}
-                  onChange={(e) => onUpdate(item.id, { replicas: parseInt(e.target.value) || 1 })}
-                  className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
-                />
-              </div>
-              {(item.replicas || 1) > 1 && (
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Minimum group replicas required to be healthy">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Min UP</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max={item.replicas || 1}
-                    value={item.minReplicasRequired || 1}
-                    onChange={(e) => onUpdate(item.id, { minReplicasRequired: parseInt(e.target.value) || 1 })}
-                    className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
-                  />
-                </div>
-              )}
-              {chaosMode && (
-                <button
-                  onClick={() => {
-                    if (isDown || isDegraded) {
-                      onUpdate(item.id, { failedReplicas: 0 });
-                    } else if (replicas > 1) {
-                      setShowKillModal(true);
-                    } else {
-                      onUpdate(item.id, { failedReplicas: 1 });
-                    }
-                  }}
-                  className={cn(
-                    "p-1.5 rounded-lg border transition-all flex items-center gap-2",
-                    (isDown || isDegraded)
-                      ? "bg-red-600 border-red-700 text-white" 
-                      : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
-                  )}
-                  title={isDown || isDegraded ? "Restore Group" : "Fail Group"}
-                >
-                  {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
-                  <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
-                </button>
-              )}
+              
               <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                 <button
                   onClick={() => onUpdate(item.id, { config: 'series' })}
@@ -476,9 +430,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   Parallel
                 </button>
               </div>
+
               {item.config === 'parallel' && (item.children?.length || 0) > 1 && (
                 <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Minimum children required to be UP for the group to be healthy">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Min UP</span>
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Nodes UP</span>
                   <input
                     type="number"
                     min="1"
@@ -489,9 +444,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   />
                 </div>
               )}
+
               {item.config === 'parallel' && (item.children?.length || 0) > 1 && (
                 <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Probability of successful failover to secondary components">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Failover %</span>
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Failover %</span>
                   <input
                     type="number"
                     min="0"
@@ -503,6 +459,57 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   />
                 </div>
               )}
+
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Replicas</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={item.replicas || 1}
+                  onChange={(e) => onUpdate(item.id, { replicas: parseInt(e.target.value) || 1 })}
+                  className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                />
+              </div>
+
+              {(item.replicas || 1) > 1 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Minimum group replicas required to be healthy">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Min UP</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={item.replicas || 1}
+                    value={item.minReplicasRequired || 1}
+                    onChange={(e) => onUpdate(item.id, { minReplicasRequired: parseInt(e.target.value) || 1 })}
+                    className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                  />
+                </div>
+              )}
+
+              {chaosMode && (
+                <button
+                  onClick={() => {
+                    if (isDown || isDegraded) {
+                      onUpdate(item.id, { failedReplicas: 0 });
+                    } else if (replicas > 1) {
+                      setShowKillModal(true);
+                    } else {
+                      onUpdate(item.id, { failedReplicas: 1 });
+                    }
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-lg border transition-all flex items-center gap-2",
+                    (isDown || isDegraded)
+                      ? "bg-red-600 border-red-700 text-white" 
+                      : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
+                  )}
+                  title={isDown || isDegraded ? "Restore Group" : "Kill Group"}
+                >
+                  {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
+                  <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setShowNotes(!showNotes)}
                 className={cn(
@@ -750,7 +757,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   ? "bg-red-600 border-red-700 text-white" 
                   : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
               )}
-              title={isDown || isDegraded ? "Restore Component" : "Fail Component"}
+              title={isDown || isDegraded ? "Restore Component" : "Kill Component"}
             >
               {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
               <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
@@ -902,7 +909,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           failoverSla: 99.999,
           notes: "Dual utility feeds with automatic ATS.",
           children: [
-            { id: 'grid', name: 'Utility Grid', type: 'component', sla: 99.9, replicas: 1, notes: "Reliability of local municipality feed.", mttr: 120 },
+            { id: 'grid', name: 'Utility Grid Feed', type: 'component', sla: 99.9, replicas: 1, notes: "Reliability of local municipality feed.", mttr: 120 },
             { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2, notes: "N+1 configuration with 48h fuel supply.", mttr: 15 },
           ]
         },
@@ -1038,7 +1045,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
               failoverSla: 99.999,
               children: [
                 { id: 'grid', name: 'Utility Grid Feed', type: 'component', sla: 99.9, replicas: 1, icon: 'zapOff', mttr: 240 },
-                { id: 'diesel', name: 'N+1 Diesel Generators', type: 'component', sla: 99.5, replicas: 2, minReplicasRequired: 1, icon: 'zapOff', mttr: 10 },
+                { id: 'diesel', name: 'N+1 Diesel Generators', type: 'component', sla: 99.0, replicas: 2, minReplicasRequired: 1, icon: 'zapOff', mttr: 10 },
               ]
             },
             {
@@ -1417,7 +1424,7 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                 
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">{step.explanation}</p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {activeTab === 'sla' ? (
                     <>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
