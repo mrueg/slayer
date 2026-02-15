@@ -66,7 +66,7 @@ export const calculateSLA = (item: SLAItem): number => {
 };
 
 export interface BottleneckResult {
-  id: string;
+  ids: string[];
   impact: number;
 }
 
@@ -119,9 +119,8 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
   const currentRootSla = calculateSLA(root);
   const allItems = getAllItems(root);
   
-  let bestId = root.id;
   let maxImpact = -1;
-  let lowestSlaAtMaxImpact = 101;
+  let results: { id: string, individualSla: number }[] = [];
 
   // Skip the root itself as the bottleneck candidate unless it's the only node
   const candidates = allItems.length > 1 
@@ -133,19 +132,122 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
     const impact = slaWithImprovement - currentRootSla;
     const individualSla = calculateSLA(item);
     
-    // Tie-breaker: if impact is the same (common in parallel groups), 
-    // pick the one with the lowest individual SLA.
     const isSignificantImprovement = impact > maxImpact + 1e-12;
-    const isEquivalentButWorseSla = Math.abs(impact - maxImpact) < 1e-12 && individualSla < lowestSlaAtMaxImpact;
+    const isEquivalentImpact = Math.abs(impact - maxImpact) < 1e-12;
 
-    if (isSignificantImprovement || isEquivalentButWorseSla) {
+    if (isSignificantImprovement) {
       maxImpact = impact;
-      lowestSlaAtMaxImpact = individualSla;
-      bestId = item.id;
+      results = [{ id: item.id, individualSla }];
+    } else if (isEquivalentImpact && impact > 0) {
+      results.push({ id: item.id, individualSla });
     }
   }
 
-  return { id: bestId, impact: maxImpact };
+  // If we have multiple candidates with equal impact, 
+  // we still only want to highlight the ones with the lowest individual SLA 
+  // (the truly weakest parts of that specific impact tier).
+  if (results.length > 1) {
+    const lowestSla = Math.min(...results.map(r => r.individualSla));
+    return {
+      ids: results.filter(r => r.individualSla <= lowestSla + 1e-12).map(r => r.id),
+      impact: maxImpact
+    };
+  }
+
+  return { ids: results.map(r => r.id), impact: maxImpact };
+};
+
+export interface CalculationStep {
+  id: string;
+  name: string;
+  type: 'component' | 'group';
+  formula: string;
+  explanation: string;
+  inputValues: string[];
+  result: number;
+}
+
+export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
+  if (item.isOptional) {
+    return [{
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      formula: "100%",
+      explanation: "Optional component excluded from calculation",
+      inputValues: [],
+      result: 100
+    }];
+  }
+
+  const steps: CalculationStep[] = [];
+  let baseSla = 100;
+  let formula = "";
+  let explanation = "";
+  let inputs: string[] = [];
+
+  if (item.type === 'component') {
+    baseSla = item.sla ?? 100;
+    formula = `${baseSla}%`;
+    explanation = "Base component SLA";
+  } else {
+    const children = item.children || [];
+    if (children.length === 0) {
+      baseSla = 100;
+      formula = "100%";
+      explanation = "Empty group";
+    } else {
+      // Get steps for all children first
+      const childStepGroups = children.map(child => getCalculationSteps(child));
+      childStepGroups.forEach(childSteps => steps.push(...childSteps));
+      
+      const childResults = children.map(child => calculateSLA(child));
+      inputs = childResults.map(r => `${formatSLAPercentage(r)}%`);
+
+      if (item.config === 'series') {
+        baseSla = childResults.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
+        formula = childResults.map(r => `(${formatSLAPercentage(r)}%)`).join(' * ');
+        explanation = `Series group: Product of all children`;
+      } else {
+        const primarySla = childResults[0] / 100;
+        const othersFailureProbability = childResults.slice(1).reduce((acc, sla) => acc * (1 - sla / 100), 1);
+        const switchReliability = (item.failoverSla ?? 100) / 100;
+        
+        const failureProbability = (1 - primarySla) * ((1 - switchReliability) + switchReliability * othersFailureProbability);
+        baseSla = (1 - failureProbability) * 100;
+        
+        formula = `1 - ( (1 - ${formatSLAPercentage(childResults[0])}%) * ( (1 - ${item.failoverSla ?? 100}%) + ${item.failoverSla ?? 100}% * (1 - S_SLA) ) )`;
+        explanation = `Parallel group with ${item.failoverSla ?? 100}% failover reliability`;
+      }
+    }
+  }
+
+  // Apply redundancy (replicas)
+  const replicas = item.replicas || 1;
+  if (replicas > 1) {
+    const finalSla = (1 - Math.pow(1 - baseSla / 100, replicas)) * 100;
+    steps.push({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      formula: `1 - (1 - ${formatSLAPercentage(baseSla)}%)^${replicas}`,
+      explanation: `${replicas}x Parallel Redundancy for ${item.name}`,
+      inputValues: inputs,
+      result: finalSla
+    });
+  } else {
+    steps.push({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      formula,
+      explanation,
+      inputValues: inputs,
+      result: baseSla
+    });
+  }
+
+  return steps;
 };
 
 export interface ErrorBudget {

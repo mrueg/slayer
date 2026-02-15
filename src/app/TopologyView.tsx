@@ -15,7 +15,7 @@ function cn(...inputs: ClassValue[]) {
 
 interface TopologyViewProps {
   root: SLAItem;
-  bottleneckId: string;
+  bottleneckIds: string[];
 }
 
 const ICON_MAP = {
@@ -65,14 +65,14 @@ const getIcon = (item: SLAItem) => {
   return <Component className="w-4 h-4 text-slate-400" />;
 };
 
-const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckId: string }> = ({ 
+const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: string[] }> = ({ 
   item, 
   depth,
-  bottleneckId
+  bottleneckIds
 }) => {
   const isGroup = item.type === 'group';
   const sla = calculateSLA(item);
-  const isBottleneck = item.id === bottleneckId;
+  const isBottleneck = bottleneckIds.includes(item.id);
   const isOptional = item.isOptional;
 
   return (
@@ -184,7 +184,7 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckId: strin
               key={child.id} 
               item={child} 
               depth={depth + 1}
-              bottleneckId={bottleneckId}
+              bottleneckIds={bottleneckIds}
             />
           ))}
         </div>
@@ -193,7 +193,7 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckId: strin
   );
 };
 
-export default function TopologyView({ root, bottleneckId }: TopologyViewProps) {
+export default function TopologyView({ root, bottleneckIds }: TopologyViewProps) {
   return (
     <div className="w-full overflow-auto bg-slate-100/50 dark:bg-slate-900/20 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-inner min-h-[600px] relative group/canvas transition-colors">
       <div className="absolute top-6 left-6 flex items-center gap-2 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest bg-white/80 dark:bg-slate-800/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 z-20">
@@ -201,7 +201,7 @@ export default function TopologyView({ root, bottleneckId }: TopologyViewProps) 
         Interactive Topology Map
       </div>
       <div className="p-24 min-w-max flex items-center justify-center min-h-full">
-        <TopologyNode item={root} depth={0} bottleneckId={bottleneckId} />
+        <TopologyNode item={root} depth={0} bottleneckIds={bottleneckIds} />
       </div>
       
       {/* Background Grid */}

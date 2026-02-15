@@ -14,7 +14,9 @@ import {
   DowntimePeriod,
   InputMode,
   findBottleneck,
-  calculateErrorBudget
+  calculateErrorBudget,
+  getCalculationSteps,
+  CalculationStep
 } from '@/lib/sla-calculator';
 import TopologyView from './TopologyView';
 import { clsx, type ClassValue } from 'clsx';
@@ -157,13 +159,13 @@ interface ItemNodeProps {
   onRemove: (id: string) => void;
   onAddChild: (groupId: string, type: 'component' | 'group') => void;
   depth: number;
-  bottleneckId: string;
+  bottleneckIds: string[];
 }
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckId }) => {
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
-  const isBottleneck = item.id === bottleneckId;
+  const isBottleneck = bottleneckIds.includes(item.id);
 
   const handleModeToggle = (newMode: InputMode) => {
     onUpdate(item.id, { inputMode: newMode });
@@ -304,7 +306,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 onRemove={onRemove} 
                 onAddChild={onAddChild}
                 depth={depth + 1}
-                bottleneckId={bottleneckId}
+                bottleneckIds={bottleneckIds}
               />
             ))}
             <div className="flex gap-2">
@@ -610,6 +612,73 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
   }
 };
 
+const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => void }> = ({ steps, onClose }) => {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
+              <Calculator className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Calculation Breakdown</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Step-by-step mathematical derivation</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"
+          >
+            <Plus className="w-6 h-6 rotate-45" />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 font-sans">
+          {steps.map((step, index) => (
+            <div key={`${step.id}-${index}`} className="relative pl-8 pb-4 border-l-2 border-slate-100 dark:border-slate-800 last:border-l-transparent">
+              <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-4 border-white dark:border-slate-900 shadow-sm" />
+              
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">{step.name}</span>
+                  <span className="text-[10px] font-mono bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">
+                    {step.type.toUpperCase()}
+                  </span>
+                </div>
+                
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">{step.explanation}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Formula</span>
+                    <code className="text-xs font-mono text-indigo-600 dark:text-indigo-400 break-all">{step.formula}</code>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Result</span>
+                    <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
+                      {formatSLAPercentage(step.result)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+          >
+            Close Breakdown
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function SLACalculator() {
   const defaultSystem: SLAItem = {
     id: 'root',
@@ -674,6 +743,7 @@ export default function SLACalculator() {
   const [darkMode, setDarkMode] = useState(false);
   const [fullWidth, setFullWidth] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
   const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
   const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
@@ -789,6 +859,7 @@ export default function SLACalculator() {
   const compositeSla = useMemo(() => calculateSLA(root), [root]);
   const downtime = useMemo(() => getDowntime(compositeSla), [compositeSla]);
   const bottleneck = useMemo(() => findBottleneck(root), [root]);
+  const calculationSteps = useMemo(() => getCalculationSteps(root), [root]);
   const errorBudget = useMemo(() => 
     calculateErrorBudget(compositeSla, consumedDowntime, budgetPeriod),
     [compositeSla, consumedDowntime, budgetPeriod]
@@ -976,10 +1047,10 @@ export default function SLACalculator() {
                 onRemove={onRemove} 
                 onAddChild={onAddChild} 
                 depth={0} 
-                bottleneckId={bottleneck.id}
+                bottleneckIds={bottleneck.ids}
               />
             ) : (
-              <TopologyView root={root} bottleneckId={bottleneck.id} />
+              <TopologyView root={root} bottleneckIds={bottleneck.ids} />
             )}
           </div>
 
@@ -991,6 +1062,12 @@ export default function SLACalculator() {
                 <div className="text-5xl font-black mb-2 tracking-tighter">
                   {formatSLAPercentage(compositeSla)}%
                 </div>
+                <button
+                  onClick={() => setShowBreakdown(true)}
+                  className="mt-4 px-4 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest transition-all backdrop-blur-sm border border-white/10"
+                >
+                  Show Detailed Work
+                </button>
               </div>
               
               <div className="p-6 space-y-6">
@@ -1081,12 +1158,20 @@ export default function SLACalculator() {
               </div>
             </section>
           </div>
+        )}
         </div>
 
         <footer className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-sm font-medium italic">
           South of Heaven, North of Five Nines
         </footer>
       </div>
+
+      {showBreakdown && (
+        <CalculationBreakdown 
+          steps={calculationSteps} 
+          onClose={() => setShowBreakdown(false)} 
+        />
+      )}
     </div>
   );
 }
