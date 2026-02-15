@@ -1020,6 +1020,7 @@ export default function SLACalculator() {
   const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
   const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
   const [simulationResult, setSimulationResult] = useState<MonteCarloResult | null>(null);
+  const [overrideTargetSla, setOverrideTargetSla] = useState<number | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1070,7 +1071,8 @@ export default function SLACalculator() {
     setIsSimulating(true);
     // Use setTimeout to allow the UI to show loading state
     setTimeout(() => {
-      const result = runMonteCarlo(reliability, compositeSla, 10000);
+      const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
+      const result = runMonteCarlo(reliability, target, 10000);
       setSimulationResult(result);
       setIsSimulating(false);
     }, 50);
@@ -1529,6 +1531,33 @@ export default function SLACalculator() {
                 >
                   {isSimulating ? "Running..." : "Run 10k Sims"}
                 </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target SLA for Simulation (%)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    max="100"
+                    value={overrideTargetSla !== null ? overrideTargetSla : compositeSla}
+                    onChange={(e) => setOverrideTargetSla(parseFloat(e.target.value))}
+                    className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-sm dark:text-slate-200"
+                    placeholder={compositeSla.toString()}
+                  />
+                  {overrideTargetSla !== null && (
+                    <button 
+                      onClick={() => setOverrideTargetSla(null)}
+                      className="text-[10px] font-bold text-indigo-500 hover:text-indigo-400 uppercase whitespace-nowrap"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1.5 text-[9px] text-slate-400 leading-tight italic">
+                  Default is system SLA ({formatSLAPercentage(compositeSla)}%). Change this to see risk vs a different contractual goal.
+                </p>
               </div>
 
               {!simulationResult ? (
