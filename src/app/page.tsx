@@ -970,101 +970,118 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
     }
   },
   hybrid_cloud: {
-    name: "Hybrid Cloud FinTech (Complex)",
+    name: "Enterprise Hybrid Platform (Detailed)",
     data: {
       id: 'root',
-      name: 'Global Transaction Platform',
+      name: 'Financial Transaction Platform',
       type: 'group',
       config: 'series',
-      notes: "Hybrid architecture bridging AWS Cloud and Legacy Mainframe Core.",
+      notes: "Mission-critical hybrid stack spanning AWS and Private Datacenter.",
       children: [
         {
-          id: 'ingress-layer',
-          name: 'Global Ingress',
+          id: 'ingress',
+          name: 'Edge Ingress',
           type: 'group',
           config: 'series',
           children: [
-            { id: 'dns', name: 'Cloudflare DNS', type: 'component', sla: 100, replicas: 1, icon: 'globe', mttr: 5 },
-            { id: 'waf', name: 'Cloudflare WAF', type: 'component', sla: 99.99, replicas: 1, icon: 'shield', mttr: 15 },
-            { 
-              id: 'api-gateway', 
-              name: 'Regional API Gateways', 
-              type: 'component', 
-              sla: 99.95, 
-              replicas: 3, 
-              minReplicasRequired: 2, 
-              icon: 'zap',
-              mttr: 10,
-              notes: "Requires 2/3 regions to handle peak traffic." 
-            }
+            { id: 'dns', name: 'Global DNS', type: 'component', sla: 100, replicas: 1, icon: 'globe', mttr: 5 },
+            { id: 'waf', name: 'WAF & DDoS Shield', type: 'component', sla: 99.99, replicas: 1, icon: 'shield', mttr: 15 },
           ]
         },
         {
-          id: 'service-mesh',
-          name: 'Microservices Mesh (EKS)',
-          type: 'group',
-          config: 'parallel',
-          failoverSla: 99.99,
-          notes: "Multi-cluster Kubernetes mesh.",
-          children: [
-            { id: 'cluster-a', name: 'Primary Cluster (US)', type: 'component', sla: 99.9, replicas: 1, icon: 'server', mttr: 45, hasCircuitBreaker: true },
-            { id: 'cluster-b', name: 'Standby Cluster (EU)', type: 'component', sla: 99.9, replicas: 1, icon: 'server', mttr: 45, hasCircuitBreaker: true },
-          ]
-        },
-        {
-          id: 'mainframe-link',
-          name: 'Mainframe Core (On-Prem)',
+          id: 'k8s-platform',
+          name: 'Kubernetes Platform (EKS)',
           type: 'group',
           config: 'series',
-          notes: "Critical path to physical datacenter.",
+          notes: "Modern cloud-native service layer.",
           children: [
-            { 
-              id: 'dx-connection', 
-              name: 'Direct Connect', 
-              type: 'component', 
-              sla: 99.99, 
-              replicas: 2, 
-              minReplicasRequired: 1, 
-              icon: 'network',
-              mttr: 240,
-              notes: "Redundant physical fibers."
-            },
             {
-              id: 'mainframe-hardware',
-              name: 'z16 Mainframe',
+              id: 'k8s-control-plane',
+              name: 'K8s Control Plane',
               type: 'group',
               config: 'parallel',
+              minChildrenRequired: 2,
+              notes: "High-availability etcd and API server cluster.",
               children: [
-                { id: 'lpar-1', name: 'LPAR A (Active)', type: 'component', sla: 99.999, replicas: 1, icon: 'cpu', mttr: 600 },
-                { id: 'lpar-2', name: 'LPAR B (Active)', type: 'component', sla: 99.999, replicas: 1, icon: 'cpu', mttr: 600 },
+                { id: 'master-1', name: 'Control Node 1', type: 'component', sla: 99.95, replicas: 1, icon: 'cpu', mttr: 30 },
+                { id: 'master-2', name: 'Control Node 2', type: 'component', sla: 99.95, replicas: 1, icon: 'cpu', mttr: 30 },
+                { id: 'master-3', name: 'Control Node 3', type: 'component', sla: 99.95, replicas: 1, icon: 'cpu', mttr: 30 },
               ]
             },
             {
-              id: 'physical-plant',
-              name: 'Facility Primitives',
+              id: 'k8s-data-plane',
+              name: 'Worker Node Groups',
               type: 'group',
-              config: 'series',
+              config: 'parallel',
+              minChildrenRequired: 2,
+              notes: "Requires at least 2 functional node groups for capacity.",
               children: [
-                { id: 'ups', name: 'UPS Battery Array', type: 'component', sla: 99.999, replicas: 4, minReplicasRequired: 3, icon: 'zapOff', mttr: 30 },
-                { id: 'cooling', name: 'Liquid Cooling Loop', type: 'component', sla: 99.99, replicas: 2, minReplicasRequired: 1, icon: 'server', mttr: 120 }
+                { id: 'ng-1', name: 'Node Group A (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15, hasCircuitBreaker: true },
+                { id: 'ng-2', name: 'Node Group B (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15, hasCircuitBreaker: true },
+                { id: 'ng-3', name: 'Node Group C (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15, hasCircuitBreaker: true },
               ]
             }
           ]
         },
         {
-          id: 'ledger-db',
-          name: 'Distributed Ledger',
+          id: 'dc-facility',
+          name: 'On-Prem Private Cloud',
           type: 'group',
-          config: 'parallel',
-          notes: "Quorum-based write consistency.",
-          minChildrenRequired: 3,
-          failoverSla: 100,
+          config: 'series',
+          notes: "Physical datacenter dependencies.",
           children: [
-            { id: 'node-1', name: 'Ledger Node 1', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
-            { id: 'node-2', name: 'Ledger Node 2', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
-            { id: 'node-3', name: 'Ledger Node 3', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
-            { id: 'node-4', name: 'Ledger Node 4', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
-            { id: 'node-5', name: 'Ledger Node 5', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
+            {
+              id: 'dc-power',
+              name: 'Power & Cooling',
+              type: 'group',
+              config: 'parallel',
+              failoverSla: 99.999,
+              children: [
+                { id: 'grid', name: 'Utility Grid Feed', type: 'component', sla: 99.9, replicas: 1, icon: 'zapOff', mttr: 240 },
+                { id: 'diesel', name: 'N+1 Diesel Generators', type: 'component', sla: 99.5, replicas: 2, minReplicasRequired: 1, icon: 'zapOff', mttr: 10 },
+              ]
+            },
+            {
+              id: 'spine-leaf',
+              name: 'Spine-Leaf Network',
+              type: 'group',
+              config: 'series',
+              notes: "Non-blocking high-speed fabric.",
+              children: [
+                { id: 'spine', name: 'Core Spine Switches', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, icon: 'network', mttr: 60 },
+                { id: 'leaf', name: 'Top-of-Rack Leaf Switches', type: 'component', sla: 99.99, replicas: 2, minReplicasRequired: 1, icon: 'network', mttr: 30 },
+              ]
+            },
+            {
+              id: 'compute-racks',
+              name: 'HCI Compute Racks',
+              type: 'group',
+              config: 'parallel',
+              minChildrenRequired: 1,
+              notes: "Hyper-Converged Infrastructure nodes.",
+              children: [
+                {
+                  id: 'rack-a',
+                  name: 'Rack Unit A',
+                  type: 'group',
+                  config: 'series',
+                  children: [
+                    { id: 'pdu-a', name: 'Dual PDUs', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, icon: 'zap', mttr: 120 },
+                    { id: 'blades-a', name: 'Blade Chassis (16 Nodes)', type: 'component', sla: 99.9, replicas: 16, minReplicasRequired: 12, icon: 'server', mttr: 45 }
+                  ]
+                },
+                {
+                  id: 'rack-b',
+                  name: 'Rack Unit B',
+                  type: 'group',
+                  config: 'series',
+                  children: [
+                    { id: 'pdu-b', name: 'Dual PDUs', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, icon: 'zap', mttr: 120 },
+                    { id: 'blades-b', name: 'Blade Chassis (16 Nodes)', type: 'component', sla: 99.9, replicas: 16, minReplicasRequired: 12, icon: 'server', mttr: 45 }
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]
