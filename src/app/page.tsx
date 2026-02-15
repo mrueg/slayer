@@ -335,7 +335,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
       {isFailed && (
         <div className="absolute -top-2 -left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
           <Skull className="w-2 h-2" />
-          CRASHED
+          DOWN
         </div>
       )}
       {isBottleneck && (
