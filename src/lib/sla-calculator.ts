@@ -145,6 +145,36 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
   };
 };
 
+export const getHistogramData = (distribution: number[], bins: number = 40): { bin: string, count: number, label: string }[] => {
+  if (distribution.length === 0) return [];
+  
+  const min = distribution[0];
+  const max = distribution[distribution.length - 1];
+  const range = max - min;
+  const binSize = range / bins;
+  
+  const histogram: { count: number, start: number, end: number }[] = [];
+  for (let i = 0; i < bins; i++) {
+    histogram.push({
+      count: 0,
+      start: min + i * binSize,
+      end: min + (i + 1) * binSize
+    });
+  }
+  
+  distribution.forEach(val => {
+    let binIdx = Math.floor((val - min) / binSize);
+    if (binIdx >= bins) binIdx = bins - 1;
+    histogram[binIdx].count++;
+  });
+  
+  return histogram.map(h => ({
+    bin: h.start.toFixed(2),
+    count: h.count,
+    label: `${formatDuration(h.start)} - ${formatDuration(h.end)}`
+  }));
+};
+
 export const calculateReliability = (item: SLAItem): ReliabilityResult => {
   if (item.isFailed) return { sla: 0, frequency: 999999, mttr: item.mttr || 60 };
   if (item.isOptional) return { sla: 100, frequency: 0, mttr: 0 };
