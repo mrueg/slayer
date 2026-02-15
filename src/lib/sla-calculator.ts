@@ -130,8 +130,6 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
 
     // Parallel redundancy for replicas (K-of-N approximation)
     const sla = calculateKofN(Array(replicas).fill(baseSla / 100), kRequired) * 100;
-    
-    // Simplification for frequency: still using 1-of-N logic for now or scaled by K
     const frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, replicas - kRequired) * (replicas / kRequired);
     const mttr = baseMttr / (replicas - kRequired + 1);
 
@@ -181,7 +179,7 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
   if (groupReplicas > 1) {
     const baseSla = sla;
     const baseMttr = mttr || 60;
-    const baseFrequency = frequency || ((1 - baseSla / 100) * YEAR_MINUTES) / baseMttr;
+    const baseFrequency = frequency || ((1 - baseSla / 100) * YEAR_MINUTES) / bMttr;
 
     sla = calculateKofN(Array(groupReplicas).fill(baseSla / 100), gk) * 100;
     frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, groupReplicas - gk) * (groupReplicas / gk);
@@ -214,6 +212,49 @@ const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => 
       baseSla = 100;
     } else {
       const childSlas = children.map(child => calculateSLAWithOverride(child, overrideId));
+      if (item.config === 'series') {
+        baseSla = childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
+      } else {
+        const k = item.minChildrenRequired || 1;
+        const probabilities = childSlas.map(s => s / 100);
+        const switchReliability = (item.failoverSla ?? 100) / 100;
+        
+        if (k === 1) {
+          const primarySla = probabilities[0];
+          const othersFailureProb = probabilities.slice(1).reduce((acc, p) => acc * (1 - p), 1);
+          const failureProbability = (1 - primarySla) * ((1 - switchReliability) + switchReliability * othersFailureProb);
+          baseSla = (1 - failureProbability) * 100;
+        } else {
+          baseSla = calculateKofN(probabilities, k) * 100 * switchReliability;
+        }
+      }
+    }
+  }
+
+  const replicas = item.replicas || 1;
+  const k = item.minReplicasRequired || 1;
+  if (replicas <= 1) return baseSla;
+
+  return calculateKofN(Array(replicas).fill(baseSla / 100), k) * 100;
+};
+
+/**
+ * Calculates the SLA of an item while treating a specific ID as 0% available.
+ */
+const calculateSLAWithForcedFailure = (item: SLAItem, forcedFailedId: string): number => {
+  if (item.id === forcedFailedId) return 0;
+  if (item.isFailed) return 0;
+  if (item.isOptional) return 100;
+  
+  let baseSla = 100;
+  if (item.type === 'component') {
+    baseSla = item.sla ?? 100;
+  } else {
+    const children = item.children || [];
+    if (children.length === 0) {
+      baseSla = 100;
+    } else {
+      const childSlas = children.map(child => calculateSLAWithForcedFailure(child, forcedFailedId));
       if (item.config === 'series') {
         baseSla = childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
       } else {
