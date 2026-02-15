@@ -919,10 +919,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           ))}
         </div>
 
-        <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
-            v2.0 Professional Reliability Suite
-          </div>
+        <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-end gap-4">
           <button 
             onClick={onClose}
             className="px-8 py-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:shadow-2xl hover:scale-105 transition-all active:scale-95"
@@ -1417,7 +1414,7 @@ export default function SLACalculator() {
               <Calculator className="w-10 h-10 text-blue-600" />
               slayer | composite SLA calculator
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs tracking-tight">Professional Reliability Engineering & Probabilistic Risk Modeling</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs tracking-tight">Reliability Engineering & Probabilistic Risk Modeling</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
