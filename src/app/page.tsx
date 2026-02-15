@@ -922,6 +922,107 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
         { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1, notes: "Storage-level cross-region replication.", mttr: 10 },
       ]
     }
+  },
+  hybrid_cloud: {
+    name: "Hybrid Cloud FinTech (Complex)",
+    data: {
+      id: 'root',
+      name: 'Global Transaction Platform',
+      type: 'group',
+      config: 'series',
+      notes: "Hybrid architecture bridging AWS Cloud and Legacy Mainframe Core.",
+      children: [
+        {
+          id: 'ingress-layer',
+          name: 'Global Ingress',
+          type: 'group',
+          config: 'series',
+          children: [
+            { id: 'dns', name: 'Cloudflare DNS', type: 'component', sla: 100, replicas: 1, icon: 'globe', mttr: 5 },
+            { id: 'waf', name: 'Cloudflare WAF', type: 'component', sla: 99.99, replicas: 1, icon: 'shield', mttr: 15 },
+            { 
+              id: 'api-gateway', 
+              name: 'Regional API Gateways', 
+              type: 'component', 
+              sla: 99.95, 
+              replicas: 3, 
+              minReplicasRequired: 2, 
+              icon: 'zap',
+              mttr: 10,
+              notes: "Requires 2/3 regions to handle peak traffic." 
+            }
+          ]
+        },
+        {
+          id: 'service-mesh',
+          name: 'Microservices Mesh (EKS)',
+          type: 'group',
+          config: 'parallel',
+          failoverSla: 99.99,
+          notes: "Multi-cluster Kubernetes mesh.",
+          children: [
+            { id: 'cluster-a', name: 'Primary Cluster (US)', type: 'component', sla: 99.9, replicas: 1, icon: 'server', mttr: 45, hasCircuitBreaker: true },
+            { id: 'cluster-b', name: 'Standby Cluster (EU)', type: 'component', sla: 99.9, replicas: 1, icon: 'server', mttr: 45, hasCircuitBreaker: true },
+          ]
+        },
+        {
+          id: 'mainframe-link',
+          name: 'Mainframe Core (On-Prem)',
+          type: 'group',
+          config: 'series',
+          notes: "Critical path to physical datacenter.",
+          children: [
+            { 
+              id: 'dx-connection', 
+              name: 'Direct Connect', 
+              type: 'component', 
+              sla: 99.99, 
+              replicas: 2, 
+              minReplicasRequired: 1, 
+              icon: 'network',
+              mttr: 240,
+              notes: "Redundant physical fibers."
+            },
+            {
+              id: 'mainframe-hardware',
+              name: 'z16 Mainframe',
+              type: 'group',
+              config: 'parallel',
+              children: [
+                { id: 'lpar-1', name: 'LPAR A (Active)', type: 'component', sla: 99.999, replicas: 1, icon: 'cpu', mttr: 600 },
+                { id: 'lpar-2', name: 'LPAR B (Active)', type: 'component', sla: 99.999, replicas: 1, icon: 'cpu', mttr: 600 },
+              ]
+            },
+            {
+              id: 'physical-plant',
+              name: 'Facility Primitives',
+              type: 'group',
+              config: 'series',
+              children: [
+                { id: 'ups', name: 'UPS Battery Array', type: 'component', sla: 99.999, replicas: 4, minReplicasRequired: 3, icon: 'zapOff', mttr: 30 },
+                { id: 'cooling', name: 'Liquid Cooling Loop', type: 'component', sla: 99.99, replicas: 2, minReplicasRequired: 1, icon: 'server', mttr: 120 }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'ledger-db',
+          name: 'Distributed Ledger',
+          type: 'group',
+          config: 'parallel',
+          notes: "Quorum-based write consistency.",
+          minChildrenRequired: 3,
+          failoverSla: 100,
+          children: [
+            { id: 'node-1', name: 'Ledger Node 1', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
+            { id: 'node-2', name: 'Ledger Node 2', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
+            { id: 'node-3', name: 'Ledger Node 3', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
+            { id: 'node-4', name: 'Ledger Node 4', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
+            { id: 'node-5', name: 'Ledger Node 5', type: 'component', sla: 99.95, replicas: 1, icon: 'database', mttr: 30 },
+          ]
+        }
+      ]
+    }
   }
 };
 
