@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame, Dices, BarChart3
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame, Dices, BarChart3, HelpCircle
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -840,6 +840,100 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
   }
 };
 
+const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const sections = [
+    {
+      title: "Reliability Engine",
+      icon: <Calculator className="w-4 h-4" />,
+      content: [
+        { label: "Series Group", text: "Components depend on each other. If one fails, the whole group fails. SLA is the product of all child SLAs." },
+        { label: "Parallel Group", text: "Components provide redundancy. The group only fails if all members fail. Includes Failover % to model switch reliability." },
+        { label: "MTTR Modeling", text: "Mean Time To Recovery. Defines the average duration of an outage, used to calculate system-wide recovery times." },
+        { label: "Incident Frequency", text: "Calculated based on SLA and MTTR to estimate how many outages you should expect per year." }
+      ]
+    },
+    {
+      title: "Chaos & Simulation",
+      icon: <Flame className="w-4 h-4 text-orange-500" />,
+      content: [
+        { label: "Chaos Mode", text: "Interactive mode to simulate 'Killing' specific components to see real-time system degradation." },
+        { label: "Blast Radius Heatmap", text: "Visualizes the criticality of each node. Darker colors indicate nodes that would cause massive SLA drops if they failed." },
+        { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations to show statistical variance, median downtime, and 'Bad Year' (P95) risks." },
+        { label: "Impact Analysis", text: "Automatically identifies System Bottlenecks where improvements would yield the highest uptime ROI." }
+      ]
+    },
+    {
+      title: "Productivity Tools",
+      icon: <Settings className="w-4 h-4 text-blue-500" />,
+      content: [
+        { label: "Cloud SLA Catalog", text: "Searchable database of official SLAs from AWS, Azure, and GCP for one-click architectural modeling." },
+        { label: "Optionality", text: "Mark components as 'Optional' (e.g., Analytics) to see reliability if non-critical features are excluded." },
+        { label: "Shareable URLs", text: "Instantly encode your entire design into a Base64 URL for sharing without a backend." },
+        { label: "Calculation Steps", text: "Click 'Show Detailed Work' to see the exact mathematical derivation of every metric." }
+      ]
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[32px] shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20">
+              <HelpCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">Slayer Documentation</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-bold tracking-tight uppercase opacity-70">South of Heaven, North of Five Nines</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          >
+            <Plus className="w-8 h-8 rotate-45" />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-3 gap-8 scrollbar-hide">
+          {sections.map((section, idx) => (
+            <div key={idx} className="space-y-6">
+              <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-100 dark:border-slate-800">
+                <div className="text-blue-600 dark:text-blue-400">{section.icon}</div>
+                <h3 className="font-black uppercase tracking-widest text-xs text-slate-900 dark:text-white">{section.title}</h3>
+              </div>
+              <div className="space-y-6">
+                {section.content.map((item, i) => (
+                  <div key={i} className="group">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1 group-hover:translate-x-1 transition-transform inline-block">
+                      {item.label}
+                    </div>
+                    <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+                      {item.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+            v2.0 Professional Reliability Suite
+          </div>
+          <button 
+            onClick={onClose}
+            className="px-8 py-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:shadow-2xl hover:scale-105 transition-all active:scale-95"
+          >
+            Got it, Let&apos;s Rock
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: number, onClose: () => void }> = ({ result, targetSla, onClose }) => {
   const bins = useMemo(() => getHistogramData(result.distribution, 50), [result.distribution]);
   const maxCount = Math.max(...bins.map(b => b.count));
@@ -1131,6 +1225,7 @@ export default function SLACalculator() {
   const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('vertical');
   const [darkMode, setDarkMode] = useState(false);
   const [chaosMode, setChaosMode] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
@@ -1482,6 +1577,14 @@ export default function SLACalculator() {
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
 
             <button
+              onClick={() => setShowHelp(true)}
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+              title="View Documentation"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+
+            <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
               title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
@@ -1763,6 +1866,10 @@ export default function SLACalculator() {
           targetSla={overrideTargetSla !== null ? overrideTargetSla : compositeSla}
           onClose={() => setShowHistogram(false)}
         />
+      )}
+
+      {showHelp && (
+        <HelpModal onClose={() => setShowHelp(false)} />
       )}
     </div>
   );
