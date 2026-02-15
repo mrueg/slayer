@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code
+import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Maximize2, Minimize2
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -184,7 +183,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
       "relative rounded-xl transition-all border",
       isGroup 
         ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm mb-4" 
-        : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 p-4 flex flex-col md:flex-row gap-4 items-end group",
+        : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 p-4 flex flex-col lg:flex-row gap-4 items-end group",
       depth > 0 && isGroup && "ml-4 md:ml-8",
       isBottleneck && "ring-2 ring-red-500 dark:ring-red-600 shadow-lg shadow-red-500/10"
     )}>
@@ -352,7 +351,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             </div>
           </div>
 
-          <div className="flex flex-col gap-1 w-full md:w-auto">
+          <div className="flex flex-col gap-1 w-full lg:w-auto">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Criticality</label>
             <button
               onClick={() => onUpdate(item.id, { isOptional: !item.isOptional })}
@@ -369,7 +368,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             </button>
           </div>
 
-          <div className="flex flex-col gap-1 w-full md:w-auto">
+          <div className="flex flex-col gap-1 w-full lg:w-auto">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Input Mode</label>
             <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm h-[38px]">
               <button
@@ -396,7 +395,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           </div>
 
           {mode === 'percentage' ? (
-            <div className="w-full md:w-32">
+            <div className="w-full lg:w-32">
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">SLA (%)</label>
               <input
                 type="number"
@@ -409,7 +408,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               />
             </div>
           ) : (
-            <div className="w-full md:w-48 flex gap-2">
+            <div className="w-full lg:w-48 flex gap-2">
               <div className="flex-1">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (sec)</label>
                 <input
@@ -435,7 +434,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             </div>
           )}
 
-          <div className="w-full md:w-20">
+          <div className="w-full lg:w-20">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Replicas</label>
             <input
               type="number"
@@ -673,6 +672,7 @@ export default function SLACalculator() {
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [darkMode, setDarkMode] = useState(false);
+  const [fullWidth, setFullWidth] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
   const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
@@ -822,7 +822,7 @@ export default function SLACalculator() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 md:p-8 font-sans transition-colors duration-300">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1800px] mx-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white flex items-center gap-3 italic">
@@ -832,6 +832,14 @@ export default function SLACalculator() {
             <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold italic tracking-wide">Raining Blood (and Uptime)</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFullWidth(!fullWidth)}
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+              title={fullWidth ? "Show Sidebar" : "Hide Sidebar (Full Width)"}
+            >
+              {fullWidth ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
+
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all mr-2"
@@ -956,8 +964,11 @@ export default function SLACalculator() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          <div className={cn(
+            "space-y-6 transition-all duration-500",
+            fullWidth ? "xl:col-span-4" : "xl:col-span-3"
+          )}>
             {view === 'list' ? (
               <ItemNode 
                 item={root} 
@@ -972,8 +983,9 @@ export default function SLACalculator() {
             )}
           </div>
 
-          <div className="space-y-6">
-            <section className="bg-slate-900 dark:bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-xl overflow-hidden sticky top-8 transition-colors">
+          {!fullWidth && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+              <section className="bg-slate-900 dark:bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-xl overflow-hidden sticky top-8 transition-colors">
               <div className="p-8 text-center bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900">
                 <p className="text-blue-100 text-sm font-semibold uppercase tracking-widest mb-2">Total System SLA</p>
                 <div className="text-5xl font-black mb-2 tracking-tighter">
