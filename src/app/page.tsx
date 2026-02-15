@@ -874,20 +874,20 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       title: "Reliability Engine",
       icon: <Calculator className="w-4 h-4" />,
       content: [
-        { label: "Series Group", text: "Components depend on each other. If one fails, the whole group fails. SLA is the product of all child SLAs." },
-        { label: "Parallel Group", text: "Components provide redundancy. The group only fails if all members fail. Includes Failover % to model switch reliability." },
-        { label: "MTTR Modeling", text: "Mean Time To Recovery. Defines the average duration of an outage, used to calculate system-wide recovery times." },
-        { label: "Incident Frequency", text: "Calculated based on SLA and MTTR to estimate how many outages you should expect per year." }
+        { label: "K-out-of-N Redundancy", text: "Support for 'Partial Failures'. Define 'Min UP' requirements (e.g. 2-out-of-3) to model systems that stay healthy at reduced capacity." },
+        { label: "Failover Reliability", text: "Parallel groups include a 'Failover %' to model the success rate of the switch mechanism itself." },
+        { label: "MTTR Modeling", text: "Input Mean Time To Recovery for components to calculate weighted system recovery times and yearly outage durations." },
+        { label: "Incident Frequency", text: "Estimated outages per year based on the statistical relationship between SLA and recovery time." }
       ]
     },
     {
       title: "Chaos & Simulation",
       icon: <Flame className="w-4 h-4 text-orange-500" />,
       content: [
-        { label: "Chaos Mode", text: "Interactive mode to simulate 'Killing' specific components to see real-time system degradation." },
-        { label: "Blast Radius Heatmap", text: "Visualizes the criticality of each node. Darker colors indicate nodes that would cause massive SLA drops if they failed." },
-        { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations to show statistical variance, median downtime, and 'Bad Year' (P95) risks." },
-        { label: "Impact Analysis", text: "Automatically identifies System Bottlenecks where improvements would yield the highest uptime ROI." }
+        { label: "Chaos Mode", text: "Interactive mode to 'Kill' specific components or groups to see real-time blast radius and system degradation." },
+        { label: "Blast Radius Heatmap", text: "Visual overlay that colors nodes based on their 'System Health Impact'—see which failures are catastrophic." },
+        { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations to show statistical variance, breach risk, and 'Bad Year' (P95) scenarios." },
+        { label: "Distribution Histogram", text: "Visual bell curve of all 10,000 simulation outcomes to understand the 'long-tail' risk of your architecture." }
       ]
     },
     {
@@ -895,9 +895,9 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       icon: <Settings className="w-4 h-4 text-blue-500" />,
       content: [
         { label: "Cloud SLA Catalog", text: "Searchable database of official SLAs from AWS, Azure, and GCP for one-click architectural modeling." },
-        { label: "Optionality", text: "Mark components as 'Optional' (e.g., Analytics) to see reliability if non-critical features are excluded." },
-        { label: "Shareable URLs", text: "Instantly encode your entire design into a Base64 URL for sharing without a backend." },
-        { label: "Calculation Steps", text: "Click 'Show Detailed Work' to see the exact mathematical derivation of every metric." }
+        { label: "Impact Analysis", text: "Sensitivity engine that identifies 'System Bottlenecks' where improvements yield the highest gains." },
+        { label: "Calculation Steps", text: "A 'Show Detailed Work' modal providing full mathematical transparency for both SLA and MTTR." },
+        { label: "Shareable URLs", text: "Instantly encode your entire design into a Base64 URL for instant sharing without a backend." }
       ]
     }
   ];
