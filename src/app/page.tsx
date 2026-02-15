@@ -22,7 +22,8 @@ import {
   ReliabilityResult,
   runMonteCarlo,
   MonteCarloResult,
-  getHistogramData
+  getHistogramData,
+  getBlastRadiusMap
 } from '@/lib/sla-calculator';
 import TopologyView from './TopologyView';
 import { clsx, type ClassValue } from 'clsx';
