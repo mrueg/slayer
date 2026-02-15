@@ -567,14 +567,15 @@ export default function SLACalculator() {
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold italic tracking-wide">Raining Blood (and Uptime)</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all mr-2"
               title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
+
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
               <button
                 onClick={() => setView('list')}
@@ -597,89 +598,97 @@ export default function SLACalculator() {
                 Topology
               </button>
             </div>
-            <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2" />
-            <div className="flex gap-2">
-            <div className="relative" ref={templateRef}>
-              <button 
-                onClick={() => setShowTemplates(!showTemplates)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-              >
-                <Library className="w-4 h-4" />
-                Templates
-                <ChevronDown className={cn("w-3 h-3 transition-transform", showTemplates && "rotate-180")} />
-              </button>
-              
-              {showTemplates && (
-                <div className="absolute top-full mt-2 left-0 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-3 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 mb-1">
-                    Architecture Patterns
+
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <div className="flex items-center gap-1">
+              <div className="relative" ref={templateRef}>
+                <button 
+                  onClick={() => setShowTemplates(!showTemplates)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                  title="Load infrastructure templates"
+                >
+                  <Library className="w-4 h-4" />
+                  <span className="hidden xl:inline">Templates</span>
+                  <ChevronDown className={cn("w-3 h-3 transition-transform", showTemplates && "rotate-180")} />
+                </button>
+                
+                {showTemplates && (
+                  <div className="absolute top-full mt-2 left-0 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 mb-1">
+                      Architecture Patterns
+                    </div>
+                    {Object.entries(TEMPLATES).map(([id, template]) => (
+                      <button
+                        key={id}
+                        onClick={() => handleLoadTemplate(id)}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex flex-col"
+                      >
+                        <span className="font-bold">{template.name}</span>
+                      </button>
+                    ))}
                   </div>
-                  {Object.entries(TEMPLATES).map(([id, template]) => (
-                    <button
-                      key={id}
-                      onClick={() => handleLoadTemplate(id)}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex flex-col"
-                    >
-                      <span className="font-bold">{template.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+                )}
+              </div>
+
+              <div className="relative">
+                <button 
+                  onClick={handleShare}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                  title="Copy shareable URL to clipboard"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span className="hidden xl:inline">Share</span>
+                </button>
+                {showShareTooltip && (
+                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-xl animate-in fade-in slide-in-from-top-1 z-50 whitespace-nowrap">
+                    COPIED!
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="relative">
+
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <div className="flex items-center gap-1">
               <button 
-                onClick={handleShare}
+                onClick={() => fileInputRef.current?.click()}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-                title="Copy shareable URL"
+                title="Import configuration from JSON"
               >
-                <Share2 className="w-4 h-4" />
-                Share
+                <Upload className="w-4 h-4" />
+                <span className="hidden xl:inline">Import</span>
               </button>
-              {showShareTooltip && (
-                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-xl animate-in fade-in slide-in-from-top-1 z-50">
-                  COPIED!
-                </div>
-              )}
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                title="Export configuration to JSON"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden xl:inline">Export</span>
+              </button>
             </div>
-            <button 
-              onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-              title="Export configuration to JSON"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-              title="Import configuration from JSON"
-            >
-              <Upload className="w-4 h-4" />
-              Import
-            </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleImport} 
-              accept=".json" 
-              className="hidden" 
-            />
-            <div className="w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
-            <button 
-              onClick={handleReset}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-            >
-              <RefreshCcw className="w-4 h-4" />
-              Reset Example
-            </button>
-            <button 
-              onClick={handleClear}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-100 dark:hover:border-red-800 transition-colors shadow-sm"
-            >
-              <Eraser className="w-4 h-4" />
-              Clear All
-            </button>
-          </div>
+
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={handleReset}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                title="Reset to default example"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                <span className="hidden xl:inline text-xs">Reset</span>
+              </button>
+              <button 
+                onClick={handleClear}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-100 dark:hover:border-red-800 transition-colors shadow-sm"
+                title="Clear all components"
+              >
+                <Eraser className="w-4 h-4" />
+                <span className="hidden xl:inline text-xs text-red-600">Clear</span>
+              </button>
+            </div>
           </div>
         </header>
 
