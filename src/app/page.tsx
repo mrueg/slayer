@@ -1417,7 +1417,7 @@ export default function SLACalculator() {
               <Calculator className="w-10 h-10 text-blue-600" />
               slayer | composite SLA calculator
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold italic tracking-wide">Raining Blood (and Uptime)</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs tracking-tight">Professional Reliability Engineering & Probabilistic Risk Modeling</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
