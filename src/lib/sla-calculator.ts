@@ -9,6 +9,7 @@ export interface SLAItem {
   sla?: number; // Percentage, e.g., 99.9 (for components)
   replicas?: number; // Number of redundant instances (for components)
   config?: Configuration; // For groups
+  failoverSla?: number; // Failover reliability for parallel groups
   children?: SLAItem[]; // For groups
   inputMode?: InputMode;
   downtimeValue?: number; // in seconds
@@ -37,10 +38,15 @@ export const calculateSLA = (item: SLAItem): number => {
       if (item.config === 'series') {
         baseSla = childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
       } else {
-        const failureProbability = childSlas.reduce(
+        const primarySla = childSlas[0] / 100;
+        const othersFailureProbability = childSlas.slice(1).reduce(
           (acc, sla) => acc * (1 - sla / 100),
           1
         );
+        const switchReliability = (item.failoverSla ?? 100) / 100;
+        
+        // P_fail = P_fail_primary * [ (1 - R_switch) + R_switch * P_fail_others ]
+        const failureProbability = (1 - primarySla) * ((1 - switchReliability) + switchReliability * othersFailureProbability);
         baseSla = (1 - failureProbability) * 100;
       }
     }
@@ -79,7 +85,10 @@ const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => 
       if (item.config === 'series') {
         baseSla = childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
       } else {
-        const failureProbability = childSlas.reduce((acc, sla) => acc * (1 - sla / 100), 1);
+        const primarySla = childSlas[0] / 100;
+        const othersFailureProbability = childSlas.slice(1).reduce((acc, sla) => acc * (1 - sla / 100), 1);
+        const switchReliability = (item.failoverSla ?? 100) / 100;
+        const failureProbability = (1 - primarySla) * ((1 - switchReliability) + switchReliability * othersFailureProbability);
         baseSla = (1 - failureProbability) * 100;
       }
     }

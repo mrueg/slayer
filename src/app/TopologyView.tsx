@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SLAItem, calculateSLA, formatSLAPercentage } from '@/lib/sla-calculator';
-import { Layers, Component, Zap, Shield, Database, Globe, MousePointer2, AlertTriangle } from 'lucide-react';
+import { Layers, Component, Zap, Shield, Database, Globe, MousePointer2, AlertTriangle, ToggleRight } from 'lucide-react';
 
 interface TopologyViewProps {
   root: SLAItem;
@@ -97,6 +97,12 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckId: strin
             <div className="absolute left-1/2 -translate-x-1/2 -top-3 text-[8px] font-black bg-white dark:bg-slate-800 px-1 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 rounded uppercase z-20 whitespace-nowrap">
               {item.config}
             </div>
+            {item.config === 'parallel' && (item.children?.length || 0) > 1 && (item.failoverSla ?? 100) < 100 && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-1.5 flex items-center gap-1 text-[7px] font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-1 rounded border border-amber-100 dark:border-amber-900/30 whitespace-nowrap z-20">
+                <ToggleRight className="w-2 h-2" />
+                SWITCH: {item.failoverSla}%
+              </div>
+            )}
           </div>
         )}
       </div>

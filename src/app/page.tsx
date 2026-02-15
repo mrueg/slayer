@@ -136,6 +136,20 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   Parallel
                 </button>
               </div>
+              {item.config === 'parallel' && (item.children?.length || 0) > 1 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Probability of successful failover to secondary components">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Failover %</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={item.failoverSla ?? 100}
+                    onChange={(e) => onUpdate(item.id, { failoverSla: parseFloat(e.target.value) || 0 })}
+                    className="w-12 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Replicas</span>
                 <input
@@ -313,6 +327,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       name: 'High Availability DB',
       type: 'group',
       config: 'parallel',
+      failoverSla: 99.9,
       children: [
         { id: 'az-1', name: 'AZ-1 Primary Instance', type: 'component', sla: 99.95, replicas: 1 },
         { id: 'az-2', name: 'AZ-2 Standby Instance', type: 'component', sla: 99.95, replicas: 1 },
