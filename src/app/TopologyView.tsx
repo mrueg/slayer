@@ -54,14 +54,21 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number }> = ({
               <div className={`text-[9px] font-black uppercase tracking-wider mb-1 ${isGroup ? "text-slate-400" : "text-slate-500"}`}>
                 {isGroup ? "Configuration" : "Redundancy"}
               </div>
-              <span className={`
-                text-[10px] font-bold px-2 py-0.5 rounded
-                ${isGroup 
-                  ? "bg-blue-100 text-blue-700" 
-                  : "bg-slate-800 text-slate-400 border border-slate-700"}
-              `}>
-                {isGroup ? item.config?.toUpperCase() : `${item.replicas || 1} REPLICAS`}
-              </span>
+              <div className="flex gap-1">
+                <span className={`
+                  text-[10px] font-bold px-2 py-0.5 rounded
+                  ${isGroup 
+                    ? "bg-blue-100 text-blue-700" 
+                    : "bg-slate-800 text-slate-400 border border-slate-700"}
+                `}>
+                  {isGroup ? item.config?.toUpperCase() : `${item.replicas || 1} REPLICAS`}
+                </span>
+                {isGroup && (item.replicas || 1) > 1 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">
+                    {item.replicas}X REDUNDANCY
+                  </span>
+                )}
+              </div>
             </div>
             <div className="text-right">
               <div className={`text-[9px] font-black uppercase tracking-wider mb-1 ${isGroup ? "text-slate-400" : "text-slate-500"}`}>

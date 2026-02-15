@@ -125,6 +125,17 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   Parallel
                 </button>
               </div>
+              <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Replicas</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={item.replicas || 1}
+                  onChange={(e) => onUpdate(item.id, { replicas: parseInt(e.target.value) || 1 })}
+                  className="w-8 bg-transparent outline-none font-mono text-xs text-center"
+                />
+              </div>
               <button
                 onClick={() => onRemove(item.id)}
                 className="p-2 text-slate-400 hover:text-red-500 transition-colors"

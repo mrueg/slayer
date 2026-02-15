@@ -23,32 +23,36 @@ export interface CalculationResult {
 }
 
 export const calculateSLA = (item: SLAItem): number => {
+  let baseSla = 100;
+
   if (item.type === 'component') {
-    const singleSla = item.sla ?? 100;
-    const replicas = item.replicas || 1;
-    
-    if (replicas <= 1) return singleSla;
-    
-    // Multiple replicas of a single component are treated as parallel redundancy
-    // SLA = 1 - (1 - SLA_single)^replicas
-    const failureProbability = Math.pow(1 - singleSla / 100, replicas);
-    return (1 - failureProbability) * 100;
-  }
-
-  const children = item.children || [];
-  if (children.length === 0) return 100;
-
-  const childSlas = children.map(child => calculateSLA(child));
-
-  if (item.config === 'series') {
-    return childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
+    baseSla = item.sla ?? 100;
   } else {
-    const failureProbability = childSlas.reduce(
-      (acc, sla) => acc * (1 - sla / 100),
-      1
-    );
-    return (1 - failureProbability) * 100;
+    const children = item.children || [];
+    if (children.length === 0) {
+      baseSla = 100;
+    } else {
+      const childSlas = children.map(child => calculateSLA(child));
+
+      if (item.config === 'series') {
+        baseSla = childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
+      } else {
+        const failureProbability = childSlas.reduce(
+          (acc, sla) => acc * (1 - sla / 100),
+          1
+        );
+        baseSla = (1 - failureProbability) * 100;
+      }
+    }
   }
+
+  // Apply redundancy (replicas) to both components and groups
+  const replicas = item.replicas || 1;
+  if (replicas <= 1) return baseSla;
+
+  // SLA = 1 - (1 - SLA_base)^replicas
+  const failureProbability = Math.pow(1 - baseSla / 100, replicas);
+  return (1 - failureProbability) * 100;
 };
 
 export const formatSLAPercentage = (value: number): string => {
