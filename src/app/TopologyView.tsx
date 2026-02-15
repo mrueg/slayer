@@ -303,7 +303,7 @@ const TopologyNode: React.FC<{
   );
 };
 
-export default function TopologyView({ root, bottleneckIds, layout, chaosMode, onUpdate }: TopologyViewProps) {
+export default function TopologyView({ root, bottleneckIds, layout, chaosMode, onUpdate, blastRadiusMap }: TopologyViewProps) {
   return (
     <div className={cn(
       "w-full overflow-auto rounded-3xl border shadow-inner min-h-[600px] relative group/canvas transition-colors duration-700",
@@ -326,6 +326,7 @@ export default function TopologyView({ root, bottleneckIds, layout, chaosMode, o
           layout={layout} 
           chaosMode={chaosMode}
           onUpdate={onUpdate}
+          blastRadiusMap={blastRadiusMap}
         />
       </div>
       
