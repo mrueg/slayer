@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library } from 'lucide-react';
+import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2 } from 'lucide-react';
 import { 
   SLAItem, 
   calculateSLA, 
@@ -410,6 +410,7 @@ export default function SLACalculator() {
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [darkMode, setDarkMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showShareTooltip, setShowShareTooltip] = useState(false);
   const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
   const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -422,6 +423,22 @@ export default function SLACalculator() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Load from URL on mount
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      try {
+        const decoded = JSON.parse(atob(hash));
+        if (decoded && decoded.id) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setRoot(decoded);
+        }
+      } catch {
+        console.error('Failed to decode configuration from URL');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -436,6 +453,19 @@ export default function SLACalculator() {
   const handleReset = () => {
     if (confirm('Reset to default example?')) {
       setRoot(defaultSystem);
+    }
+  };
+
+  const handleShare = () => {
+    try {
+      const encoded = btoa(JSON.stringify(root));
+      const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
+      navigator.clipboard.writeText(url);
+      window.location.hash = encoded;
+      setShowShareTooltip(true);
+      setTimeout(() => setShowShareTooltip(false), 2000);
+    } catch {
+      alert('Failed to generate share link');
     }
   };
 
@@ -483,7 +513,7 @@ export default function SLACalculator() {
         } else {
           alert('Invalid SLAYER configuration file.');
         }
-      } catch (err) {
+      } catch {
         alert('Failed to parse JSON file.');
       }
     };
@@ -593,6 +623,21 @@ export default function SLACalculator() {
                       <span className="font-bold">{template.name}</span>
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <button 
+                onClick={handleShare}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                title="Copy shareable URL"
+              >
+                <Share2 className="w-4 h-4" />
+                Share
+              </button>
+              {showShareTooltip && (
+                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-xl animate-in fade-in slide-in-from-top-1 z-50">
+                  COPIED!
                 </div>
               )}
             </div>
