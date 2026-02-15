@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Maximize2, Minimize2
+import { 
+  Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -67,6 +68,7 @@ const getIcon = (item: SLAItem) => {
   if (name.includes('api') || name.includes('service') || name.includes('lambda')) return <Zap className="w-4 h-4" />;
   if (name.includes('power') || name.includes('grid') || name.includes('gen')) return <ZapOff className="w-4 h-4" />;
   if (name.includes('rack') || name.includes('blade') || name.includes('server')) return <Server className="w-4 h-4" />;
+  if (name.includes('router') || name.includes('switch') || name.includes('net')) return <Network className="w-4 h-4" />;
   if (name.includes('storage') || name.includes('s3') || name.includes('disk')) return <HardDrive className="w-4 h-4" />;
   if (name.includes('compute') || name.includes('cpu') || name.includes('node')) return <Cpu className="w-4 h-4" />;
   return <Component className="w-4 h-4" />;
@@ -418,7 +420,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   min="0"
                   value={item.downtimeValue || 0}
                   onChange={(e) => handleDowntimeChange(parseFloat(e.target.value) || 0, item.downtimePeriod || 'month')}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                 />
               </div>
               <div className="w-20">
@@ -426,7 +428,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 <select
                   value={item.downtimePeriod || 'month'}
                   onChange={(e) => handleDowntimeChange(item.downtimeValue || 0, e.target.value as DowntimePeriod)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[38px] dark:text-slate-200"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[38px] dark:text-slate-200"
                 >
                   <option value="day">Day</option>
                   <option value="month">Month</option>
@@ -741,7 +743,6 @@ export default function SLACalculator() {
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [darkMode, setDarkMode] = useState(false);
-  const [fullWidth, setFullWidth] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
@@ -893,7 +894,7 @@ export default function SLACalculator() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 md:p-8 font-sans transition-colors duration-300">
-      <div className="max-w-[1800px] mx-auto">
+      <div className="w-full mx-auto px-4">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white flex items-center gap-3 italic">
@@ -903,14 +904,6 @@ export default function SLACalculator() {
             <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold italic tracking-wide">Raining Blood (and Uptime)</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFullWidth(!fullWidth)}
-              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-              title={fullWidth ? "Show Sidebar" : "Hide Sidebar (Full Width)"}
-            >
-              {fullWidth ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-            </button>
-
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all mr-2"
@@ -1035,11 +1028,8 @@ export default function SLACalculator() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-          <div className={cn(
-            "space-y-6 transition-all duration-500",
-            fullWidth ? "xl:col-span-4" : "xl:col-span-3"
-          )}>
+        <div className="flex flex-col xl:flex-row gap-8 items-start">
+          <div className="flex-1 w-full space-y-6">
             {view === 'list' ? (
               <ItemNode 
                 item={root} 
@@ -1054,9 +1044,8 @@ export default function SLACalculator() {
             )}
           </div>
 
-          {!fullWidth && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-              <section className="bg-slate-900 dark:bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-xl overflow-hidden sticky top-8 transition-colors">
+          <div className="w-full xl:w-96 space-y-6 shrink-0">
+            <section className="bg-slate-900 dark:bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-xl overflow-hidden sticky top-8 transition-colors">
               <div className="p-8 text-center bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900">
                 <p className="text-blue-100 text-sm font-semibold uppercase tracking-widest mb-2">Total System SLA</p>
                 <div className="text-5xl font-black mb-2 tracking-tighter">
@@ -1098,7 +1087,7 @@ export default function SLACalculator() {
               </div>
             </section>
 
-            <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm sticky top-[480px]">
+            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[480px]">
               <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-4 h-4 text-blue-500" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget Calculator</h3>
@@ -1158,7 +1147,6 @@ export default function SLACalculator() {
               </div>
             </section>
           </div>
-        )}
         </div>
 
         <footer className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-sm font-medium italic">
