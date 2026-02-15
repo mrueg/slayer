@@ -224,7 +224,6 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: stri
     </div>
   );
 };
-};
 
 export default function TopologyView({ root, bottleneckIds }: TopologyViewProps) {
   return (
