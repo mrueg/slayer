@@ -17,7 +17,9 @@ import {
   findBottleneck,
   calculateErrorBudget,
   getCalculationSteps,
-  CalculationStep
+  CalculationStep,
+  calculateReliability,
+  ReliabilityResult
 } from '@/lib/sla-calculator';
 import TopologyView from './TopologyView';
 import { clsx, type ClassValue } from 'clsx';
@@ -458,6 +460,18 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               </div>
             </div>
           )}
+
+          <div className="w-full lg:w-24">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">MTTR (min)</label>
+            <input
+              type="number"
+              min="1"
+              value={item.mttr || 60}
+              onChange={(e) => onUpdate(item.id, { mttr: parseInt(e.target.value) || 1 })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+              title="Mean Time To Recovery (average time to fix)"
+            />
+          </div>
 
           <div className="w-full lg:w-20">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Replicas</label>
@@ -916,6 +930,7 @@ export default function SLACalculator() {
   const compositeSla = useMemo(() => calculateSLA(root), [root]);
   const downtime = useMemo(() => getDowntime(compositeSla), [compositeSla]);
   const bottleneck = useMemo(() => findBottleneck(root), [root]);
+  const reliability = useMemo(() => calculateReliability(root), [root]);
   const calculationSteps = useMemo(() => getCalculationSteps(root), [root]);
   const errorBudget = useMemo(() => 
     calculateErrorBudget(compositeSla, consumedDowntime, budgetPeriod),
@@ -1157,6 +1172,24 @@ export default function SLACalculator() {
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400 text-sm">Daily</span>
                       <span className="font-mono font-medium">{formatDuration(downtime.downtimePerDay)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 pb-2">System Reliability</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 text-sm">System MTTR</span>
+                      <span className="font-mono font-medium">{formatDuration(reliability.mttr)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 text-sm">Expected Frequency</span>
+                      <span className="font-mono font-medium">
+                        {reliability.frequency > 0 
+                          ? `1 incident every ${(1 / reliability.frequency).toFixed(1)} years`
+                          : "0 incidents"}
+                      </span>
                     </div>
                   </div>
                 </div>

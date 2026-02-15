@@ -8,6 +8,7 @@ export interface SLAItem {
   type: 'component' | 'group';
   icon?: string; // Custom icon name
   notes?: string; // Descriptive annotations
+  mttr?: number; // Mean Time To Recovery in minutes
   sla?: number; // Percentage, e.g., 99.9 (for components)
   replicas?: number; // Number of redundant instances (for components)
   config?: Configuration; // For groups
@@ -64,6 +65,89 @@ export const calculateSLA = (item: SLAItem): number => {
   // SLA = 1 - (1 - SLA_base)^replicas
   const failureProbability = Math.pow(1 - baseSla / 100, replicas);
   return (1 - failureProbability) * 100;
+};
+
+export interface ReliabilityResult {
+  sla: number;
+  frequency: number; // incidents per year
+  mttr: number; // minutes
+}
+
+const YEAR_MINUTES = 365.25 * 24 * 60;
+
+export const calculateReliability = (item: SLAItem): ReliabilityResult => {
+  if (item.isOptional) return { sla: 100, frequency: 0, mttr: 0 };
+
+  if (item.type === 'component') {
+    const baseSla = item.sla ?? 100;
+    const baseMttr = item.mttr || 60; // Default 1h MTTR
+    const replicas = item.replicas || 1;
+
+    // Single instance metrics
+    const baseFrequency = ((1 - baseSla / 100) * YEAR_MINUTES) / baseMttr;
+
+    if (replicas <= 1) {
+      return { sla: baseSla, frequency: baseFrequency, mttr: baseMttr };
+    }
+
+    // Parallel redundancy for replicas
+    const sla = (1 - Math.pow(1 - baseSla / 100, replicas)) * 100;
+    const frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, replicas - 1) * replicas;
+    const mttr = baseMttr / replicas;
+
+    return { sla, frequency, mttr };
+  }
+
+  const children = item.children || [];
+  if (children.length === 0) return { sla: 100, frequency: 0, mttr: 0 };
+
+  const childResults = children.map(child => calculateReliability(child));
+
+  let sla = 100;
+  let frequency = 0;
+  let mttr = 0;
+
+  if (item.config === 'series') {
+    sla = childResults.reduce((acc, r) => acc * (r.sla / 100), 1) * 100;
+    frequency = childResults.reduce((acc, r) => acc + r.frequency, 0);
+    mttr = frequency > 0 ? childResults.reduce((acc, r) => acc + (r.frequency * r.mttr), 0) / frequency : 0;
+  } else {
+    // Parallel
+    const primary = childResults[0];
+    const others = childResults.slice(1);
+    const switchReliability = (item.failoverSla ?? 100) / 100;
+
+    const othersSla = others.reduce((acc, r) => acc * (1 - r.sla / 100), 1);
+    const pFail = (1 - primary.sla / 100) * ((1 - switchReliability) + switchReliability * othersSla);
+    sla = (1 - pFail) * 100;
+
+    // Parallel frequency approx
+    frequency = childResults.length > 1 
+      ? childResults.reduce((acc, r, idx) => {
+          if (idx === 0) return r.frequency;
+          return (acc * r.frequency * (mttr + r.mttr)) / YEAR_MINUTES;
+        }, childResults[0].frequency)
+      : childResults[0].frequency;
+    
+    if (switchReliability < 1) {
+      frequency += primary.frequency * (1 - switchReliability);
+    }
+
+    mttr = frequency > 0 ? ((1 - sla / 100) * YEAR_MINUTES) / frequency : 0;
+  }
+
+  const groupReplicas = item.replicas || 1;
+  if (groupReplicas > 1) {
+    const baseSla = sla;
+    const baseMttr = mttr || 60;
+    const baseFrequency = frequency || ((1 - baseSla / 100) * YEAR_MINUTES) / baseMttr;
+
+    sla = (1 - Math.pow(1 - baseSla / 100, groupReplicas)) * 100;
+    frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, groupReplicas - 1) * groupReplicas;
+    mttr = baseMttr / groupReplicas;
+  }
+
+  return { sla, frequency, mttr };
 };
 
 export interface BottleneckResult {
