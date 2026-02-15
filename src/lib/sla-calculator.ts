@@ -239,6 +239,31 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
   return { ids: results.map(r => r.id), impact: maxImpact };
 };
 
+export interface ErrorBudget {
+  totalBudgetSeconds: number;
+  consumedSeconds: number;
+  remainingSeconds: number;
+  isBreached: boolean;
+}
+
+export const calculateErrorBudget = (targetSla: number, consumedSeconds: number, period: DowntimePeriod = 'month'): ErrorBudget => {
+  const totalSeconds = {
+    year: 365.25 * 24 * 60 * 60,
+    month: (365.25 * 24 * 60 * 60) / 12,
+    day: 24 * 60 * 60,
+  }[period];
+
+  const totalBudgetSeconds = totalSeconds * (1 - targetSla / 100);
+  const remainingSeconds = totalBudgetSeconds - consumedSeconds;
+  
+  return {
+    totalBudgetSeconds,
+    consumedSeconds,
+    remainingSeconds: Math.max(0, remainingSeconds),
+    isBreached: remainingSeconds < 0
+  };
+};
+
 export interface CalculationStep {
   id: string;
   name: string;
