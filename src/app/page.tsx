@@ -742,7 +742,7 @@ export default function SLACalculator() {
 
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
-  const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('horizontal');
+  const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('vertical');
   const [darkMode, setDarkMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
