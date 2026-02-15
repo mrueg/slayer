@@ -1268,7 +1268,8 @@ export default function SLACalculator() {
     bottleneck, 
     reliability, 
     calculationSteps, 
-    errorBudget 
+    errorBudget,
+    blastRadiusMap
   } = useMemo(() => {
     const sla = calculateSLA(root);
     return {
@@ -1277,7 +1278,8 @@ export default function SLACalculator() {
       bottleneck: findBottleneck(root),
       reliability: calculateReliability(root),
       calculationSteps: getCalculationSteps(root),
-      errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod)
+      errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod),
+      blastRadiusMap: getBlastRadiusMap(root)
     };
   }, [root, consumedDowntime, budgetPeriod]);
 
@@ -1508,6 +1510,7 @@ export default function SLACalculator() {
                 layout={topologyLayout} 
                 chaosMode={chaosMode}
                 onUpdate={onUpdate}
+                blastRadiusMap={blastRadiusMap}
               />
             )}
           </div>

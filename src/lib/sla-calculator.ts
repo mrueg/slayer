@@ -75,105 +75,7 @@ export interface ReliabilityResult {
   mttr: number; // minutes
 }
 
-export interface MonteCarloResult {
-  iterations: number;
-  meanDowntime: number;
-  medianDowntime: number;
-  p95Downtime: number;
-  p99Downtime: number;
-  breachProbability: number;
-  distribution: number[];
-}
-
 const YEAR_MINUTES = 365.25 * 24 * 60;
-
-export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number, iterations: number = 10000): MonteCarloResult => {
-  const allowedDowntimeMinutes = YEAR_MINUTES * (1 - targetSla / 100);
-  const downtimes: number[] = [];
-  let breaches = 0;
-
-  // Use normal approximation for large lambda to avoid overflow in Poisson
-  const lambda = reliability.frequency;
-  const mttr = reliability.mttr;
-
-  for (let i = 0; i < iterations; i++) {
-    let numIncidents = 0;
-    if (lambda > 100) {
-      // Normal approximation: N ~ Normal(lambda, lambda)
-      const standardNormal = Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
-      numIncidents = Math.max(0, Math.round(lambda + standardNormal * Math.sqrt(lambda)));
-    } else {
-      // Knuth's algorithm for Poisson
-      const L = Math.exp(-lambda);
-      let k = 0;
-      let p = 1;
-      do {
-        k++;
-        p *= Math.random();
-      } while (p > L);
-      numIncidents = k - 1;
-    }
-
-    let yearlyDowntime = 0;
-    for (let j = 0; j < numIncidents; j++) {
-      // Exponential distribution for each incident duration
-      yearlyDowntime += -Math.log(1 - Math.random()) * mttr;
-    }
-
-    downtimes.push(yearlyDowntime);
-    if (yearlyDowntime > allowedDowntimeMinutes) {
-      breaches++;
-    }
-  }
-
-  downtimes.sort((a, b) => a - b);
-  
-  const sum = downtimes.reduce((a, b) => a + b, 0);
-  const mean = sum / iterations;
-  const median = downtimes[Math.floor(iterations * 0.5)];
-  const p95 = downtimes[Math.floor(iterations * 0.95)];
-  const p99 = downtimes[Math.floor(iterations * 0.99)];
-
-  return {
-    iterations,
-    meanDowntime: mean,
-    medianDowntime: median,
-    p95Downtime: p95,
-    p99Downtime: p99,
-    breachProbability: (breaches / iterations) * 100,
-    distribution: downtimes
-  };
-};
-
-export const getHistogramData = (distribution: number[], bins: number = 40): { bin: string, count: number, label: string }[] => {
-  if (distribution.length === 0) return [];
-  
-  const min = distribution[0];
-  const max = distribution[distribution.length - 1];
-  const range = max - min;
-  const binSize = range / bins;
-  
-  const histogram: { count: number, start: number, end: number }[] = [];
-  for (let i = 0; i < bins; i++) {
-    histogram.push({
-      count: 0,
-      start: min + i * binSize,
-      end: min + (i + 1) * binSize
-    });
-  }
-  
-  distribution.forEach(val => {
-    let binIdx = Math.floor((val - min) / binSize);
-    if (binIdx >= bins) binIdx = bins - 1;
-    histogram[binIdx].count++;
-  });
-  
-  return histogram.map(h => ({
-    bin: h.start.toFixed(2),
-    count: h.count,
-    label: `${formatDuration(h.start)} - ${formatDuration(h.end)}`
-  }));
-};
 
 export const calculateReliability = (item: SLAItem): ReliabilityResult => {
   if (item.isFailed) return { sla: 0, frequency: 999999, mttr: item.mttr || 60 };
@@ -292,6 +194,41 @@ const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => 
   return (1 - failureProbability) * 100;
 };
 
+/**
+ * Calculates the SLA of an item while treating a specific ID as 0% available.
+ */
+const calculateSLAWithForcedFailure = (item: SLAItem, forcedFailedId: string): number => {
+  if (item.id === forcedFailedId) return 0;
+  if (item.isFailed) return 0;
+  if (item.isOptional) return 100;
+  
+  let baseSla = 100;
+  if (item.type === 'component') {
+    baseSla = item.sla ?? 100;
+  } else {
+    const children = item.children || [];
+    if (children.length === 0) {
+      baseSla = 100;
+    } else {
+      const childSlas = children.map(child => calculateSLAWithForcedFailure(child, forcedFailedId));
+      if (item.config === 'series') {
+        baseSla = childSlas.reduce((acc, sla) => acc * (sla / 100), 1) * 100;
+      } else {
+        const primarySla = childSlas[0] / 100;
+        const othersFailureProbability = childSlas.slice(1).reduce((acc, sla) => acc * (1 - sla / 100), 1);
+        const switchReliability = (item.failoverSla ?? 100) / 100;
+        const failureProbability = (1 - primarySla) * ((1 - switchReliability) + switchReliability * othersFailureProbability);
+        baseSla = (1 - failureProbability) * 100;
+      }
+    }
+  }
+
+  const replicas = item.replicas || 1;
+  if (replicas <= 1) return baseSla;
+  const failureProbability = Math.pow(1 - baseSla / 100, replicas);
+  return (1 - failureProbability) * 100;
+};
+
 const getAllItems = (item: SLAItem): SLAItem[] => {
   let items = [item];
   if (item.children) {
@@ -303,8 +240,6 @@ const getAllItems = (item: SLAItem): SLAItem[] => {
 };
 
 const getSerialMap = (item: SLAItem, parent?: SLAItem, map: Record<string, boolean> = {}): Record<string, boolean> => {
-  // An item is 'serial' if it has no parent (root) or if its immediate parent is a series group
-  // or a parallel group with only one child.
   if (!parent || parent.config === 'series' || (parent.config === 'parallel' && (parent.children?.length || 0) <= 1)) {
     map[item.id] = true;
   } else {
@@ -325,15 +260,11 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
   let maxImpact = -1;
   let results: { id: string, individualSla: number }[] = [];
 
-  // Skip the root itself as the bottleneck candidate unless it's the only node
   const candidates = allItems.length > 1 
     ? allItems.filter(item => item.id !== root.id)
     : allItems;
 
   for (const item of candidates) {
-    // IGNORE killed/failed items UNLESS they are serial.
-    // If they are in a redundant group, we killed them on purpose in Chaos mode,
-    // so they aren't the architecture's "theoretical" bottleneck.
     if (item.isFailed && !serialMap[item.id]) continue;
 
     const slaWithImprovement = calculateSLAWithOverride(root, item.id);
@@ -360,6 +291,25 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
   }
 
   return { ids: results.map(r => r.id), impact: maxImpact };
+};
+
+export const getBlastRadiusMap = (root: SLAItem): Record<string, number> => {
+  const currentRootSla = calculateSLA(root);
+  const allItems = getAllItems(root);
+  const map: Record<string, number> = {};
+
+  allItems.forEach(item => {
+    if (currentRootSla <= 0) {
+      map[item.id] = item.isFailed ? 1 : 0;
+      return;
+    }
+
+    const slaWithFailure = calculateSLAWithForcedFailure(root, item.id);
+    const impact = (currentRootSla - slaWithFailure) / currentRootSla;
+    map[item.id] = Math.max(0, Math.min(1, impact));
+  });
+
+  return map;
 };
 
 export interface CalculationStep {
@@ -495,6 +445,100 @@ export const calculateErrorBudget = (targetSla: number, consumedSeconds: number,
     remainingSeconds: Math.max(0, remainingSeconds),
     isBreached: remainingSeconds < 0
   };
+};
+
+export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number, iterations: number = 10000): MonteCarloResult => {
+  const allowedDowntimeMinutes = YEAR_MINUTES * (1 - targetSla / 100);
+  const downtimes: number[] = [];
+  let breaches = 0;
+
+  const lambda = reliability.frequency;
+  const mttr = reliability.mttr;
+
+  for (let i = 0; i < iterations; i++) {
+    let numIncidents = 0;
+    if (lambda > 100) {
+      const standardNormal = Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
+      numIncidents = Math.max(0, Math.round(lambda + standardNormal * Math.sqrt(lambda)));
+    } else {
+      const L = Math.exp(-lambda);
+      let k = 0;
+      let p = 1;
+      do {
+        k++;
+        p *= Math.random();
+      } while (p > L);
+      numIncidents = k - 1;
+    }
+
+    let yearlyDowntime = 0;
+    for (let j = 0; j < numIncidents; j++) {
+      yearlyDowntime += -Math.log(1 - Math.random()) * mttr;
+    }
+
+    downtimes.push(yearlyDowntime);
+    if (yearlyDowntime > allowedDowntimeMinutes) {
+      breaches++;
+    }
+  }
+
+  downtimes.sort((a, b) => a - b);
+  
+  const sum = downtimes.reduce((a, b) => a + b, 0);
+  const mean = sum / iterations;
+  const median = downtimes[Math.floor(iterations * 0.5)];
+  const p95 = downtimes[Math.floor(iterations * 0.95)];
+  const p99 = downtimes[Math.floor(iterations * 0.99)];
+
+  return {
+    iterations,
+    meanDowntime: mean,
+    medianDowntime: median,
+    p95Downtime: p95,
+    p99Downtime: p99,
+    breachProbability: (breaches / iterations) * 100,
+    distribution: downtimes
+  };
+};
+
+export interface MonteCarloResult {
+  iterations: number;
+  meanDowntime: number;
+  medianDowntime: number;
+  p95Downtime: number;
+  p99Downtime: number;
+  breachProbability: number;
+  distribution: number[];
+}
+
+export const getHistogramData = (distribution: number[], bins: number = 40): { bin: string, count: number, label: string }[] => {
+  if (distribution.length === 0) return [];
+  
+  const min = distribution[0];
+  const max = distribution[distribution.length - 1];
+  const range = max - min;
+  const binSize = range / bins;
+  
+  const histogram: { count: number, start: number, end: number }[] = [];
+  for (let i = 0; i < bins; i++) {
+    histogram.push({
+      count: 0,
+      start: min + i * binSize,
+      end: min + (i + 1) * binSize
+    });
+  }
+  
+  distribution.forEach(val => {
+    let binIdx = Math.floor((val - min) / binSize);
+    if (binIdx >= bins) binIdx = bins - 1;
+    histogram[binIdx].count++;
+  });
+  
+  return histogram.map(h => ({
+    bin: h.start.toFixed(2),
+    count: h.count,
+    label: `${formatDuration(h.start)} - ${formatDuration(h.end)}`
+  }));
 };
 
 export const formatSLAPercentage = (value: number): string => {

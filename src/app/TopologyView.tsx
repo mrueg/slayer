@@ -19,6 +19,7 @@ interface TopologyViewProps {
   layout: 'horizontal' | 'vertical';
   chaosMode: boolean;
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
+  blastRadiusMap: Record<string, number>;
 }
 
 const ICON_MAP = {
@@ -75,13 +76,15 @@ const TopologyNode: React.FC<{
   layout: 'horizontal' | 'vertical';
   chaosMode: boolean;
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
+  blastRadiusMap: Record<string, number>;
 }> = ({ 
   item, 
   depth,
   bottleneckIds,
   layout,
   chaosMode,
-  onUpdate
+  onUpdate,
+  blastRadiusMap
 }) => {
   const isGroup = item.type === 'group';
   const sla = calculateSLA(item);
@@ -89,6 +92,16 @@ const TopologyNode: React.FC<{
   const isOptional = item.isOptional;
   const isFailed = item.isFailed;
   const isVertical = layout === 'vertical';
+  const impactScore = blastRadiusMap[item.id] || 0;
+
+  // Calculate heatmap color
+  const getHeatColor = (score: number) => {
+    if (!chaosMode || score <= 0) return "";
+    if (score > 0.8) return "bg-red-500/20 border-red-500 dark:border-red-500 shadow-red-500/20";
+    if (score > 0.4) return "bg-orange-500/20 border-orange-500 dark:border-orange-500 shadow-orange-500/20";
+    if (score > 0.1) return "bg-yellow-500/20 border-yellow-500 dark:border-yellow-500 shadow-yellow-500/20";
+    return "bg-slate-500/10 border-slate-400 dark:border-slate-600";
+  };
 
   return (
     <div className={cn(
@@ -116,7 +129,8 @@ const TopologyNode: React.FC<{
             : "bg-slate-900 dark:bg-black border-slate-800 dark:border-slate-800 shadow-xl group-hover:border-slate-600 dark:group-hover:border-slate-700",
           isBottleneck && !isFailed && "ring-2 ring-red-500 dark:ring-red-600 border-red-500 dark:border-red-600",
           isOptional && !isFailed && "opacity-50 grayscale-[0.5] border-dashed",
-          isFailed && "ring-4 ring-red-600 border-red-600 bg-red-50 dark:bg-red-950/30 shadow-2xl animate-in shake-1 duration-500"
+          isFailed && "ring-4 ring-red-600 border-red-600 bg-red-50 dark:bg-red-950/30 shadow-2xl animate-in shake-1 duration-500",
+          !isFailed && getHeatColor(impactScore)
         )}>
           {isBottleneck && !isFailed && (
             <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
@@ -130,7 +144,15 @@ const TopologyNode: React.FC<{
               DOWN
             </div>
           )}
-          {isOptional && !isFailed && (
+          {chaosMode && !isFailed && impactScore > 0 && (
+            <div className={cn(
+              "absolute -top-2 -left-2 text-white px-2 py-0.5 rounded text-[8px] font-black shadow-md z-20",
+              impactScore > 0.8 ? "bg-red-600" : (impactScore > 0.4 ? "bg-orange-600" : "bg-yellow-600")
+            )}>
+              {(impactScore * 100).toFixed(1)}% IMPACT
+            </div>
+          )}
+          {isOptional && !isFailed && !chaosMode && (
             <div className="absolute -top-2 -left-2 bg-slate-500 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
               <ShieldCheck className="w-2 h-2" />
               OPTIONAL
@@ -272,6 +294,7 @@ const TopologyNode: React.FC<{
               layout={layout}
               chaosMode={chaosMode}
               onUpdate={onUpdate}
+              blastRadiusMap={blastRadiusMap}
             />
           ))}
         </div>
