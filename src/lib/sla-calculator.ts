@@ -145,7 +145,7 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
     const bMttr = mttr || 60;
     const bFreq = frequency || ((1 - bSla / 100) * YEAR_MINUTES) / bMttr;
 
-    sla = (1 - Math.pow(1 - bSla / 100, groupReplicas)) * 100;
+    sla = (1 - Math.pow(1 - baseSla / 100, groupReplicas)) * 100;
     frequency = bFreq * Math.pow((bFreq * bMttr) / YEAR_MINUTES, groupReplicas - 1) * groupReplicas;
     mttr = bMttr / groupReplicas;
   }
@@ -204,9 +204,25 @@ const getAllItems = (item: SLAItem): SLAItem[] => {
   return items;
 };
 
+const getSerialMap = (item: SLAItem, parent?: SLAItem, map: Record<string, boolean> = {}): Record<string, boolean> => {
+  // An item is 'serial' if it has no parent (root) or if its immediate parent is a series group
+  // or a parallel group with only one child.
+  if (!parent || parent.config === 'series' || (parent.config === 'parallel' && (parent.children?.length || 0) <= 1)) {
+    map[item.id] = true;
+  } else {
+    map[item.id] = false;
+  }
+  
+  if (item.children) {
+    item.children.forEach(child => getSerialMap(child, item, map));
+  }
+  return map;
+};
+
 export const findBottleneck = (root: SLAItem): BottleneckResult => {
   const currentRootSla = calculateSLA(root);
   const allItems = getAllItems(root);
+  const serialMap = getSerialMap(root);
   
   let maxImpact = -1;
   let results: { id: string, individualSla: number }[] = [];
@@ -217,6 +233,11 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
     : allItems;
 
   for (const item of candidates) {
+    // IGNORE killed/failed items UNLESS they are serial.
+    // If they are in a redundant group, we killed them on purpose in Chaos mode,
+    // so they aren't the architecture's "theoretical" bottleneck.
+    if (item.isFailed && !serialMap[item.id]) continue;
+
     const slaWithImprovement = calculateSLAWithOverride(root, item.id);
     const impact = slaWithImprovement - currentRootSla;
     const individualSla = calculateSLA(item);
@@ -241,31 +262,6 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
   }
 
   return { ids: results.map(r => r.id), impact: maxImpact };
-};
-
-export interface ErrorBudget {
-  totalBudgetSeconds: number;
-  consumedSeconds: number;
-  remainingSeconds: number;
-  isBreached: boolean;
-}
-
-export const calculateErrorBudget = (targetSla: number, consumedSeconds: number, period: DowntimePeriod = 'month'): ErrorBudget => {
-  const totalSeconds = {
-    year: 365.25 * 24 * 60 * 60,
-    month: (365.25 * 24 * 60 * 60) / 12,
-    day: 24 * 60 * 60,
-  }[period];
-
-  const totalBudgetSeconds = totalSeconds * (1 - targetSla / 100);
-  const remainingSeconds = totalBudgetSeconds - consumedSeconds;
-  
-  return {
-    totalBudgetSeconds,
-    consumedSeconds,
-    remainingSeconds: Math.max(0, remainingSeconds),
-    isBreached: remainingSeconds < 0
-  };
 };
 
 export interface CalculationStep {
@@ -376,6 +372,31 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
   }
 
   return steps;
+};
+
+export interface ErrorBudget {
+  totalBudgetSeconds: number;
+  consumedSeconds: number;
+  remainingSeconds: number;
+  isBreached: boolean;
+}
+
+export const calculateErrorBudget = (targetSla: number, consumedSeconds: number, period: DowntimePeriod = 'month'): ErrorBudget => {
+  const totalSeconds = {
+    year: 365.25 * 24 * 60 * 60,
+    month: (365.25 * 24 * 60 * 60) / 12,
+    day: 24 * 60 * 60,
+  }[period];
+
+  const totalBudgetSeconds = totalSeconds * (1 - targetSla / 100);
+  const remainingSeconds = totalBudgetSeconds - consumedSeconds;
+  
+  return {
+    totalBudgetSeconds,
+    consumedSeconds,
+    remainingSeconds: Math.max(0, remainingSeconds),
+    isBreached: remainingSeconds < 0
+  };
 };
 
 export const formatSLAPercentage = (value: number): string => {
