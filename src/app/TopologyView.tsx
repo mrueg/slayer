@@ -164,6 +164,14 @@ const TopologyNode: React.FC<{ item: SLAItem; depth: number; bottleneckIds: stri
               </span>
             </div>
           </div>
+
+          {item.notes && (
+            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-[9px] leading-relaxed text-slate-500 dark:text-slate-400 font-medium italic line-clamp-2">
+                {item.notes}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Right/Bottom connector to children */}

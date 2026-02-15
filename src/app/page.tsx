@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -168,6 +168,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
+  const [showNotes, setShowNotes] = useState(!!item.notes);
 
   const handleModeToggle = (newMode: InputMode) => {
     onUpdate(item.id, { inputMode: newMode });
@@ -292,6 +293,16 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 />
               </div>
               <button
+                onClick={() => setShowNotes(!showNotes)}
+                className={cn(
+                  "p-2 transition-colors",
+                  showNotes ? "text-blue-500" : "text-slate-400 hover:text-blue-400"
+                )}
+                title="Toggle Notes"
+              >
+                <StickyNote className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => onRemove(item.id)}
                 className="p-2 text-slate-400 hover:text-red-500 transition-colors"
               >
@@ -299,6 +310,16 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               </button>
             </div>
           </div>
+          {showNotes && (
+            <div className="px-4 py-3 bg-blue-50/30 dark:bg-blue-900/10 border-b border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-1 duration-200">
+              <textarea
+                value={item.notes || ''}
+                onChange={(e) => onUpdate(item.id, { notes: e.target.value })}
+                placeholder="Add technical notes, assumptions, or documentation link..."
+                className="w-full bg-transparent text-xs text-slate-600 dark:text-slate-400 outline-none min-h-[60px] resize-y placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              />
+            </div>
+          )}
           <div className="p-4 space-y-4">
             {item.children?.map(child => (
               <ItemNode 
@@ -450,12 +471,32 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             />
           </div>
           <button
+            onClick={() => setShowNotes(!showNotes)}
+            className={cn(
+              "p-2 transition-colors",
+              showNotes ? "text-blue-500" : "text-slate-300 dark:text-slate-600 hover:text-blue-400"
+            )}
+            title="Toggle Notes"
+          >
+            <StickyNote className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => onRemove(item.id)}
             className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </>
+      )}
+      {showNotes && !isGroup && (
+        <div className="w-full mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-1 duration-200">
+          <textarea
+            value={item.notes || ''}
+            onChange={(e) => onUpdate(item.id, { notes: e.target.value })}
+            placeholder="Add technical notes, assumptions, or documentation link..."
+            className="w-full bg-transparent text-xs text-slate-600 dark:text-slate-400 outline-none min-h-[40px] resize-y placeholder:text-slate-400 dark:placeholder:text-slate-600 font-medium"
+          />
+        </div>
       )}
     </div>
   );
@@ -470,24 +511,26 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       type: 'group',
       config: 'series',
       children: [
-        { id: 'dns', name: 'Route53 DNS', type: 'component', sla: 100, replicas: 1 },
-        { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1 },
+        { id: 'dns', name: 'Route53 DNS', type: 'component', sla: 100, replicas: 1, notes: "AWS provides 100% SLA for Route53 DNS." },
+        { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1, notes: "Includes edge locations and global delivery." },
         { 
           id: 'frontend', 
           name: 'Frontend Assets (S3)', 
           type: 'component', 
           sla: 99.9, 
-          replicas: 1 
+          replicas: 1,
+          notes: "Static hosting in US-East-1."
         },
         {
           id: 'backend',
           name: 'API & Business Logic',
           type: 'group',
           config: 'series',
+          notes: "Core transactional path.",
           children: [
             { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 1 },
             { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 1 },
-            { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1 },
+            { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1, notes: "Global tables with multi-region replication." },
           ]
         },
         { 
@@ -496,7 +539,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'component', 
           sla: 99.9, 
           replicas: 1,
-          isOptional: true 
+          isOptional: true,
+          notes: "Non-critical tracking. System remains functional if this fails."
         },
       ]
     }
@@ -509,20 +553,23 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       type: 'group',
       config: 'parallel',
       failoverSla: 99.99,
+      notes: "Standard HA pattern with primary and hot standby.",
       children: [
         { 
           id: 'primary', 
           name: 'Primary Node (US-East-1a)', 
           type: 'component', 
           sla: 99.95, 
-          replicas: 1 
+          replicas: 1,
+          notes: "Single-instance SLA for RDS."
         },
         { 
           id: 'standby', 
           name: 'Hot Standby (US-East-1b)', 
           type: 'component', 
           sla: 99.95, 
-          replicas: 1 
+          replicas: 1,
+          notes: "Synchronous replication enabled."
         },
         { 
           id: 'backup', 
@@ -530,7 +577,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'component', 
           sla: 99.9, 
           replicas: 1,
-          isOptional: true 
+          isOptional: true,
+          notes: "Daily snapshots. RTO: 4 hours."
         },
       ]
     }
@@ -542,6 +590,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       name: 'Corporate Datacenter',
       type: 'group',
       config: 'series',
+      notes: "Physical facility dependencies.",
       children: [
         {
           id: 'power',
@@ -549,9 +598,10 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'group',
           config: 'parallel',
           failoverSla: 99.999,
+          notes: "Dual utility feeds with automatic ATS.",
           children: [
-            { id: 'grid', name: 'Utility Grid', type: 'component', sla: 99.9, replicas: 1 },
-            { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2 },
+            { id: 'grid', name: 'Utility Grid', type: 'component', sla: 99.9, replicas: 1, notes: "Reliability of local municipality feed." },
+            { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2, notes: "N+1 configuration with 48h fuel supply." },
           ]
         },
         {
@@ -559,6 +609,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           name: 'CRAC Cooling Units',
           type: 'group',
           config: 'parallel',
+          notes: "Maintained at 22°C +/- 2°C.",
           children: [
             { id: 'chiller-1', name: 'Chiller A', type: 'component', sla: 99.5, replicas: 1 },
             { id: 'chiller-2', name: 'Chiller B', type: 'component', sla: 99.5, replicas: 1 },
@@ -569,6 +620,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           name: 'Core Networking',
           type: 'group',
           config: 'series',
+          notes: "Fully redundant 100G core.",
           children: [
             { id: 'edge-router', name: 'Border Routers', type: 'component', sla: 99.99, replicas: 2 },
             { id: 'core-switch', name: 'Core Switches', type: 'component', sla: 99.99, replicas: 2 },
@@ -579,6 +631,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           name: 'Compute Racks',
           type: 'group',
           config: 'parallel',
+          notes: "Virtualized workload clusters.",
           children: [
             { id: 'rack-1', name: 'Rack A (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1 },
             { id: 'rack-2', name: 'Rack B (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1 },
@@ -594,21 +647,23 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       name: 'Global API Architecture',
       type: 'group',
       config: 'series',
+      notes: "Multi-region active-active deployment.",
       children: [
-        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 100, replicas: 1 },
+        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 100, replicas: 1, notes: "Global entry point." },
         {
           id: 'regions',
           name: 'Regional Deployments',
           type: 'group',
           config: 'parallel',
           failoverSla: 99.9,
+          notes: "Automatic failover between regions.",
           children: [
-            { id: 'us-east', name: 'US-East Region (AWS)', type: 'component', sla: 99.99, replicas: 1 },
-            { id: 'eu-west', name: 'EU-West Region (AWS)', type: 'component', sla: 99.99, replicas: 1 },
-            { id: 'ap-south', name: 'AP-South Region (AWS)', type: 'component', sla: 99.99, replicas: 1 },
+            { id: 'us-east', name: 'US-East Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Northern Virginia cluster." },
+            { id: 'eu-west', name: 'EU-West Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Ireland cluster." },
+            { id: 'ap-south', name: 'AP-South Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Mumbai cluster." },
           ]
         },
-        { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1 },
+        { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1, notes: "Storage-level cross-region replication." },
       ]
     }
   }

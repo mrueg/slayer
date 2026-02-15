@@ -7,6 +7,7 @@ export interface SLAItem {
   name: string;
   type: 'component' | 'group';
   icon?: string; // Custom icon name
+  notes?: string; // Descriptive annotations
   sla?: number; // Percentage, e.g., 99.9 (for components)
   replicas?: number; // Number of redundant instances (for components)
   config?: Configuration; // For groups
