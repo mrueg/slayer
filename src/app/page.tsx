@@ -157,6 +157,41 @@ const addChildToGroup = (items: SLAItem[], groupId: string, newItem: SLAItem): S
   });
 };
 
+const AutoExpandingTextarea: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}> = ({ value, onChange, placeholder, className }) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={cn(
+        "w-full bg-transparent overflow-hidden resize-none",
+        className
+      )}
+      rows={1}
+    />
+  );
+};
+
 interface ItemNodeProps {
   item: SLAItem;
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
@@ -314,11 +349,11 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           </div>
           {showNotes && (
             <div className="px-4 py-3 bg-blue-50/30 dark:bg-blue-900/10 border-b border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-1 duration-200">
-              <textarea
+              <AutoExpandingTextarea
                 value={item.notes || ''}
-                onChange={(e) => onUpdate(item.id, { notes: e.target.value })}
+                onChange={(notes) => onUpdate(item.id, { notes })}
                 placeholder="Add technical notes, assumptions, or documentation link..."
-                className="w-full bg-transparent text-xs text-slate-600 dark:text-slate-400 outline-none min-h-[60px] resize-y placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                className="text-xs text-slate-600 dark:text-slate-400 placeholder:text-slate-400 dark:placeholder:text-slate-600"
               />
             </div>
           )}
@@ -504,11 +539,11 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
       )}
       {showNotes && !isGroup && (
         <div className="w-full mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-1 duration-200">
-          <textarea
+          <AutoExpandingTextarea
             value={item.notes || ''}
-            onChange={(e) => onUpdate(item.id, { notes: e.target.value })}
+            onChange={(notes) => onUpdate(item.id, { notes })}
             placeholder="Add technical notes, assumptions, or documentation link..."
-            className="w-full bg-transparent text-xs text-slate-600 dark:text-slate-400 outline-none min-h-[40px] resize-y placeholder:text-slate-400 dark:placeholder:text-slate-600 font-medium"
+            className="text-xs text-slate-600 dark:text-slate-400 placeholder:text-slate-400 dark:placeholder:text-slate-600 font-medium"
           />
         </div>
       )}
