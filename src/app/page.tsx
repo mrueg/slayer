@@ -393,6 +393,17 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 {item.isOptional ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                 <span className="text-[10px] font-bold uppercase">{item.isOptional ? 'Optional' : 'Critical'}</span>
               </button>
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Replicas</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={item.replicas || 1}
+                  onChange={(e) => onUpdate(item.id, { replicas: parseInt(e.target.value) || 1 })}
+                  className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                />
+              </div>
               {chaosMode && (
                 <button
                   onClick={() => onUpdate(item.id, { isFailed: !item.isFailed })}
@@ -405,54 +416,9 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   title={isFailed ? "Restore Group" : "Fail Group"}
                 >
                   {isFailed ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
-                  <span className="text-[10px] font-bold uppercase">{isFailed ? 'Restore' : 'Fail'}</span>
+                  <span className="text-[10px] font-bold uppercase">{isFailed ? 'Restore' : 'Kill'}</span>
                 </button>
               )}
-              <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                <button
-                  onClick={() => onUpdate(item.id, { config: 'series' })}
-                  className={cn(
-                    "px-3 py-1 text-xs rounded-md transition-all",
-                    item.config === 'series' ? "bg-blue-600 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  )}
-                >
-                  Series
-                </button>
-                <button
-                  onClick={() => onUpdate(item.id, { config: 'parallel' })}
-                  className={cn(
-                    "px-3 py-1 text-xs rounded-md transition-all",
-                    item.config === 'parallel' ? "bg-blue-600 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  )}
-                >
-                  Parallel
-                </button>
-              </div>
-              {item.config === 'parallel' && (item.children?.length || 0) > 1 && (
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Probability of successful failover to secondary components">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Failover %</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={item.failoverSla ?? 100}
-                    onChange={(e) => onUpdate(item.id, { failoverSla: parseFloat(e.target.value) || 0 })}
-                    className="w-12 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
-                  />
-                </div>
-              )}
-              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Replicas</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="99"
-                  value={item.replicas || 1}
-                  onChange={(e) => onUpdate(item.id, { replicas: parseInt(e.target.value) || 1 })}
-                  className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
-                />
-              </div>
               <button
                 onClick={() => setShowNotes(!showNotes)}
                 className={cn(
