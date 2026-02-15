@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2 } from 'lucide-react';
+import { 
+  Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code
+} from 'lucide-react';
 import { 
   SLAItem, 
   calculateSLA, 
@@ -21,6 +24,97 @@ import { twMerge } from 'tailwind-merge';
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+const ICON_MAP = {
+  layers: Layers,
+  component: Component,
+  database: Database,
+  globe: Globe,
+  zap: Zap,
+  shield: Shield,
+  zapOff: ZapOff,
+  server: Server,
+  hardDrive: HardDrive,
+  cpu: Cpu,
+  cloud: Cloud,
+  lock: Lock,
+  settings: Settings,
+  messageSquare: MessageSquare,
+  mail: Mail,
+  terminal: Terminal,
+  box: Box,
+  smartphone: Smartphone,
+  monitor: Monitor,
+  code: Code,
+  network: Network,
+  activity: Activity
+};
+
+const getIcon = (item: SLAItem) => {
+  if (item.icon && ICON_MAP[item.icon as keyof typeof ICON_MAP]) {
+    const IconComp = ICON_MAP[item.icon as keyof typeof ICON_MAP];
+    return <IconComp className="w-4 h-4" />;
+  }
+  
+  const name = item.name.toLowerCase();
+  const type = item.type;
+  
+  if (type === 'group') return <Layers className="w-4 h-4" />;
+  if (name.includes('db') || name.includes('data') || name.includes('aurora')) return <Database className="w-4 h-4" />;
+  if (name.includes('dns') || name.includes('global') || name.includes('cdn')) return <Globe className="w-4 h-4" />;
+  if (name.includes('auth') || name.includes('shield') || name.includes('security')) return <Shield className="w-4 h-4" />;
+  if (name.includes('api') || name.includes('service') || name.includes('lambda')) return <Zap className="w-4 h-4" />;
+  if (name.includes('power') || name.includes('grid') || name.includes('gen')) return <ZapOff className="w-4 h-4" />;
+  if (name.includes('rack') || name.includes('blade') || name.includes('server')) return <Server className="w-4 h-4" />;
+  if (name.includes('storage') || name.includes('s3') || name.includes('disk')) return <HardDrive className="w-4 h-4" />;
+  if (name.includes('compute') || name.includes('cpu') || name.includes('node')) return <Cpu className="w-4 h-4" />;
+  return <Component className="w-4 h-4" />;
+};
+
+const IconPicker: React.FC<{ current: string | undefined, onSelect: (name: string) => void }> = ({ current, onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-all shadow-sm"
+        title="Select Icon"
+      >
+        <ChevronDown className={cn("w-3 h-3 transition-transform", isOpen && "rotate-180")} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full mt-2 left-0 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[100] p-2 grid grid-cols-4 gap-1 animate-in fade-in zoom-in-95 duration-100">
+          {Object.entries(ICON_MAP).map(([name, Icon]) => (
+            <button
+              key={name}
+              onClick={() => {
+                onSelect(name);
+                setIsOpen(false);
+              }}
+              className={cn(
+                "p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors",
+                current === name ? "text-blue-500 bg-blue-50 dark:bg-blue-900/30" : "text-slate-400 dark:text-slate-500"
+              )}
+            >
+              <Icon className="w-4 h-4" />
+            </button>
+          ))}
+          <button
+            onClick={() => {
+              onSelect('');
+              setIsOpen(false);
+            }}
+            className="col-span-4 mt-1 py-1 text-[10px] font-bold uppercase text-slate-400 hover:text-red-500 transition-colors"
+          >
+            Reset to Auto
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Helper to update a deep item in the tree
 const updateItemInTree = (items: SLAItem[], id: string, updates: Partial<SLAItem>): SLAItem[] => {
@@ -104,18 +198,51 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
         <>
           <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/50 dark:bg-slate-900/20 gap-4">
             <div className="flex items-center gap-3">
-              <Layers className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              <div className="flex items-center gap-1.5">
+                <div className="text-slate-400 dark:text-slate-500">
+                  {getIcon(item)}
+                </div>
+                <IconPicker 
+                  current={item.icon} 
+                  onSelect={(icon) => onUpdate(item.id, { icon })} 
+                />
+              </div>
               <input
                 type="text"
                 value={item.name}
                 onChange={(e) => onUpdate(item.id, { name: e.target.value })}
-                className="bg-transparent font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-b-2 focus:ring-blue-500 border-b border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                className={cn(
+                  "bg-transparent font-semibold outline-none border-b border-transparent transition-all",
+                  item.isOptional ? "text-slate-400 dark:text-slate-600 italic line-through" : "text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600"
+                )}
               />
-              <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+              <span className={cn(
+                "text-xs font-mono px-2 py-0.5 rounded-full transition-colors",
+                item.isOptional ? "bg-slate-200 dark:bg-slate-800 text-slate-500" : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+              )}>
                 {formatSLAPercentage(calculateSLA(item))}%
               </span>
+              {item.isOptional && (
+                <span className="text-[8px] font-black uppercase tracking-tighter bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ShieldCheck className="w-2 h-2" />
+                  Optional
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => onUpdate(item.id, { isOptional: !item.isOptional })}
+                className={cn(
+                  "p-1.5 rounded-lg border transition-all flex items-center gap-2",
+                  item.isOptional 
+                    ? "bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700" 
+                    : "bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-900/30"
+                )}
+                title={item.isOptional ? "Make Critical" : "Make Optional"}
+              >
+                {item.isOptional ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                <span className="text-[10px] font-bold uppercase">{item.isOptional ? 'Optional' : 'Critical'}</span>
+              </button>
               <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                 <button
                   onClick={() => onUpdate(item.id, { config: 'series' })}
@@ -204,14 +331,42 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           <div className="flex-1 w-full">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Component Name</label>
             <div className="flex items-center gap-2">
-              <Component className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+              <div className="flex items-center gap-1.5">
+                <div className="text-slate-300 dark:text-slate-600">
+                  {getIcon(item)}
+                </div>
+                <IconPicker 
+                  current={item.icon} 
+                  onSelect={(icon) => onUpdate(item.id, { icon })} 
+                />
+              </div>
               <input
                 type="text"
                 value={item.name}
                 onChange={(e) => onUpdate(item.id, { name: e.target.value })}
-                className="w-full bg-transparent border-b border-slate-200 dark:border-slate-700 py-1 outline-none focus:border-blue-500 transition-all text-sm dark:text-slate-200"
+                className={cn(
+                  "w-full bg-transparent border-b py-1 outline-none transition-all text-sm",
+                  item.isOptional ? "text-slate-400 dark:text-slate-600 italic line-through border-transparent" : "text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 focus:border-blue-500"
+                )}
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1 w-full md:w-auto">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Criticality</label>
+            <button
+              onClick={() => onUpdate(item.id, { isOptional: !item.isOptional })}
+              className={cn(
+                "p-1.5 rounded-lg border transition-all h-[38px] px-3 flex items-center gap-2",
+                item.isOptional 
+                  ? "bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700" 
+                  : "bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-900/30"
+              )}
+              title={item.isOptional ? "Make Critical" : "Make Optional"}
+            >
+              {item.isOptional ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              <span className="text-[10px] font-bold uppercase whitespace-nowrap">{item.isOptional ? 'Optional' : 'Critical'}</span>
+            </button>
           </div>
 
           <div className="flex flex-col gap-1 w-full md:w-auto">
@@ -305,33 +460,127 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
 
 const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
   serverless: {
-    name: "Serverless Web App",
+    name: "Modern Serverless App (AWS)",
     data: {
       id: 'root',
-      name: 'Serverless Stack',
+      name: 'E-Commerce Platform',
       type: 'group',
       config: 'series',
       children: [
+        { id: 'dns', name: 'Route53 DNS', type: 'component', sla: 100, replicas: 1 },
         { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1 },
-        { id: 's3', name: 'S3 Static Assets', type: 'component', sla: 99.99, replicas: 1 },
-        { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 1 },
-        { id: 'lambda', name: 'Lambda Functions', type: 'component', sla: 99.95, replicas: 1 },
-        { id: 'dynamo', name: 'DynamoDB', type: 'component', sla: 99.99, replicas: 1 },
+        { 
+          id: 'frontend', 
+          name: 'Frontend Assets (S3)', 
+          type: 'component', 
+          sla: 99.9, 
+          replicas: 1 
+        },
+        {
+          id: 'backend',
+          name: 'API & Business Logic',
+          type: 'group',
+          config: 'series',
+          children: [
+            { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 1 },
+            { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 1 },
+            { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1 },
+          ]
+        },
+        { 
+          id: 'analytics', 
+          name: 'Optional Analytics (Segment)', 
+          type: 'component', 
+          sla: 99.9, 
+          replicas: 1,
+          isOptional: true 
+        },
       ]
     }
   },
   multi_az: {
-    name: "Multi-AZ Database",
+    name: "High Availability DB Cluster",
     data: {
       id: 'root',
-      name: 'High Availability DB',
+      name: 'PostgreSQL HA Cluster',
       type: 'group',
       config: 'parallel',
-      failoverSla: 99.9,
+      failoverSla: 99.99,
       children: [
-        { id: 'az-1', name: 'AZ-1 Primary Instance', type: 'component', sla: 99.95, replicas: 1 },
-        { id: 'az-2', name: 'AZ-2 Standby Instance', type: 'component', sla: 99.95, replicas: 1 },
-        { id: 'witness', name: 'Quorum Witness', type: 'component', sla: 99.9, replicas: 1 },
+        { 
+          id: 'primary', 
+          name: 'Primary Node (US-East-1a)', 
+          type: 'component', 
+          sla: 99.95, 
+          replicas: 1 
+        },
+        { 
+          id: 'standby', 
+          name: 'Hot Standby (US-East-1b)', 
+          type: 'component', 
+          sla: 99.95, 
+          replicas: 1 
+        },
+        { 
+          id: 'backup', 
+          name: 'Cold Backup (S3)', 
+          type: 'component', 
+          sla: 99.9, 
+          replicas: 1,
+          isOptional: true 
+        },
+      ]
+    }
+  },
+  on_prem: {
+    name: "On-Premise Tier-III Datacenter",
+    data: {
+      id: 'root',
+      name: 'Corporate Datacenter',
+      type: 'group',
+      config: 'series',
+      children: [
+        {
+          id: 'power',
+          name: 'Power Infrastructure',
+          type: 'group',
+          config: 'parallel',
+          failoverSla: 99.999,
+          children: [
+            { id: 'grid', name: 'Utility Grid', type: 'component', sla: 99.9, replicas: 1 },
+            { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2 },
+          ]
+        },
+        {
+          id: 'cooling',
+          name: 'CRAC Cooling Units',
+          type: 'group',
+          config: 'parallel',
+          children: [
+            { id: 'chiller-1', name: 'Chiller A', type: 'component', sla: 99.5, replicas: 1 },
+            { id: 'chiller-2', name: 'Chiller B', type: 'component', sla: 99.5, replicas: 1 },
+          ]
+        },
+        {
+          id: 'net',
+          name: 'Core Networking',
+          type: 'group',
+          config: 'series',
+          children: [
+            { id: 'edge-router', name: 'Border Routers', type: 'component', sla: 99.99, replicas: 2 },
+            { id: 'core-switch', name: 'Core Switches', type: 'component', sla: 99.99, replicas: 2 },
+          ]
+        },
+        {
+          id: 'compute',
+          name: 'Compute Racks',
+          type: 'group',
+          config: 'parallel',
+          children: [
+            { id: 'rack-1', name: 'Rack A (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1 },
+            { id: 'rack-2', name: 'Rack B (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1 },
+          ]
+        }
       ]
     }
   },
@@ -343,20 +592,20 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       type: 'group',
       config: 'series',
       children: [
-        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 99.99, replicas: 1 },
+        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 100, replicas: 1 },
         {
           id: 'regions',
           name: 'Regional Deployments',
           type: 'group',
           config: 'parallel',
-          replicas: 1,
+          failoverSla: 99.9,
           children: [
-            { id: 'us-east', name: 'US-East Region', type: 'component', sla: 99.9, replicas: 1 },
-            { id: 'eu-west', name: 'EU-West Region', type: 'component', sla: 99.9, replicas: 1 },
-            { id: 'ap-south', name: 'AP-South Region', type: 'component', sla: 99.9, replicas: 1 },
+            { id: 'us-east', name: 'US-East Region (AWS)', type: 'component', sla: 99.99, replicas: 1 },
+            { id: 'eu-west', name: 'EU-West Region (AWS)', type: 'component', sla: 99.99, replicas: 1 },
+            { id: 'ap-south', name: 'AP-South Region (AWS)', type: 'component', sla: 99.99, replicas: 1 },
           ]
         },
-        { id: 'global-db', name: 'Global Replicated DB', type: 'component', sla: 99.99, replicas: 1 },
+        { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1 },
       ]
     }
   }

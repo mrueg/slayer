@@ -6,10 +6,12 @@ export interface SLAItem {
   id: string;
   name: string;
   type: 'component' | 'group';
+  icon?: string; // Custom icon name
   sla?: number; // Percentage, e.g., 99.9 (for components)
   replicas?: number; // Number of redundant instances (for components)
   config?: Configuration; // For groups
   failoverSla?: number; // Failover reliability for parallel groups
+  isOptional?: boolean; // If true, this item doesn't count against the total SLA
   children?: SLAItem[]; // For groups
   inputMode?: InputMode;
   downtimeValue?: number; // in seconds
@@ -24,6 +26,8 @@ export interface CalculationResult {
 }
 
 export const calculateSLA = (item: SLAItem): number => {
+  if (item.isOptional) return 100;
+  
   let baseSla = 100;
 
   if (item.type === 'component') {
@@ -72,6 +76,7 @@ export interface BottleneckResult {
  */
 const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number => {
   if (item.id === overrideId) return 100;
+  if (item.isOptional) return 100;
   
   let baseSla = 100;
   if (item.type === 'component') {
