@@ -652,6 +652,21 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
             />
           </div>
+          {chaosMode && (
+            <button
+              onClick={() => onUpdate(item.id, { isFailed: !item.isFailed })}
+              className={cn(
+                "p-1.5 rounded-lg border transition-all flex items-center gap-2",
+                isFailed 
+                  ? "bg-red-600 border-red-700 text-white" 
+                  : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
+              )}
+              title={isFailed ? "Restore Component" : "Fail Component"}
+            >
+              {isFailed ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
+              <span className="text-[10px] font-bold uppercase">{isFailed ? 'Restore' : 'Kill'}</span>
+            </button>
+          )}
           <button
             onClick={() => setShowNotes(!showNotes)}
             className={cn(
