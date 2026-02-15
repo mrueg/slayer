@@ -75,7 +75,75 @@ export interface ReliabilityResult {
   mttr: number; // minutes
 }
 
+export interface MonteCarloResult {
+  iterations: number;
+  meanDowntime: number;
+  medianDowntime: number;
+  p95Downtime: number;
+  p99Downtime: number;
+  breachProbability: number;
+  distribution: number[];
+}
+
 const YEAR_MINUTES = 365.25 * 24 * 60;
+
+export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number, iterations: number = 10000): MonteCarloResult => {
+  const allowedDowntimeMinutes = YEAR_MINUTES * (1 - targetSla / 100);
+  const downtimes: number[] = [];
+  let breaches = 0;
+
+  // Use normal approximation for large lambda to avoid overflow in Poisson
+  const lambda = reliability.frequency;
+  const mttr = reliability.mttr;
+
+  for (let i = 0; i < iterations; i++) {
+    let numIncidents = 0;
+    if (lambda > 100) {
+      // Normal approximation: N ~ Normal(lambda, lambda)
+      const standardNormal = Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
+      numIncidents = Math.max(0, Math.round(lambda + standardNormal * Math.sqrt(lambda)));
+    } else {
+      // Knuth's algorithm for Poisson
+      const L = Math.exp(-lambda);
+      let k = 0;
+      let p = 1;
+      do {
+        k++;
+        p *= Math.random();
+      } while (p > L);
+      numIncidents = k - 1;
+    }
+
+    let yearlyDowntime = 0;
+    for (let j = 0; j < numIncidents; j++) {
+      // Exponential distribution for each incident duration
+      yearlyDowntime += -Math.log(1 - Math.random()) * mttr;
+    }
+
+    downtimes.push(yearlyDowntime);
+    if (yearlyDowntime > allowedDowntimeMinutes) {
+      breaches++;
+    }
+  }
+
+  downtimes.sort((a, b) => a - b);
+  
+  const sum = downtimes.reduce((a, b) => a + b, 0);
+  const mean = sum / iterations;
+  const median = downtimes[Math.floor(iterations * 0.5)];
+  const p95 = downtimes[Math.floor(iterations * 0.95)];
+  const p99 = downtimes[Math.floor(iterations * 0.99)];
+
+  return {
+    iterations,
+    meanDowntime: mean,
+    medianDowntime: median,
+    p95Downtime: p95,
+    p99Downtime: p99,
+    breachProbability: (breaches / iterations) * 100,
+    distribution: downtimes
+  };
+};
 
 export const calculateReliability = (item: SLAItem): ReliabilityResult => {
   if (item.isFailed) return { sla: 0, frequency: 999999, mttr: item.mttr || 60 };

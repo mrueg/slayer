@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame, Dices
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -19,7 +19,9 @@ import {
   getCalculationSteps,
   CalculationStep,
   calculateReliability,
-  ReliabilityResult
+  ReliabilityResult,
+  runMonteCarlo,
+  MonteCarloResult
 } from '@/lib/sla-calculator';
 import TopologyView from './TopologyView';
 import { clsx, type ClassValue } from 'clsx';
@@ -1017,6 +1019,9 @@ export default function SLACalculator() {
   const [showShareTooltip, setShowShareTooltip] = useState(false);
   const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
   const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
+  const [simulationResult, setSimulationResult] = useState<MonteCarloResult | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
 
@@ -1057,7 +1062,18 @@ export default function SLACalculator() {
   const handleReset = () => {
     if (confirm('Reset to default example?')) {
       setRoot(defaultSystem);
+      setSimulationResult(null);
     }
+  };
+
+  const handleRunSimulation = () => {
+    setIsSimulating(true);
+    // Use setTimeout to allow the UI to show loading state
+    setTimeout(() => {
+      const result = runMonteCarlo(reliability, compositeSla, 10000);
+      setSimulationResult(result);
+      setIsSimulating(false);
+    }, 50);
   };
 
   const handleShare = () => {
@@ -1126,17 +1142,27 @@ export default function SLACalculator() {
     e.target.value = '';
   };
 
-  const compositeSla = useMemo(() => calculateSLA(root), [root]);
-  const downtime = useMemo(() => getDowntime(compositeSla), [compositeSla]);
-  const bottleneck = useMemo(() => findBottleneck(root), [root]);
-  const reliability = useMemo(() => calculateReliability(root), [root]);
-  const calculationSteps = useMemo(() => getCalculationSteps(root), [root]);
-  const errorBudget = useMemo(() => 
-    calculateErrorBudget(compositeSla, consumedDowntime, budgetPeriod),
-    [compositeSla, consumedDowntime, budgetPeriod]
-  );
+  const { 
+    compositeSla, 
+    downtime, 
+    bottleneck, 
+    reliability, 
+    calculationSteps, 
+    errorBudget 
+  } = useMemo(() => {
+    const sla = calculateSLA(root);
+    return {
+      compositeSla: sla,
+      downtime: getDowntime(sla),
+      bottleneck: findBottleneck(root),
+      reliability: calculateReliability(root),
+      calculationSteps: getCalculationSteps(root),
+      errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod)
+    };
+  }, [root, consumedDowntime, budgetPeriod]);
 
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
+    setSimulationResult(null); // Reset simulation when data changes
     if (id === 'root') {
       setRoot({ ...root, ...updates });
     } else {
@@ -1145,12 +1171,14 @@ export default function SLACalculator() {
   };
 
   const onRemove = (id: string) => {
+    setSimulationResult(null);
     if (id !== 'root') {
       setRoot({ ...root, children: removeItemFromTree(root.children || [], id) });
     }
   };
 
   const onAddChild = (groupId: string, type: 'component' | 'group') => {
+    setSimulationResult(null);
     const newItem: SLAItem = type === 'component' 
       ? { id: Math.random().toString(36).substr(2, 9), name: 'New Component', type: 'component', sla: 99.9 }
       : { id: Math.random().toString(36).substr(2, 9), name: 'New Group', type: 'group', config: 'series', children: [] };
@@ -1483,6 +1511,78 @@ export default function SLACalculator() {
                   </p>
                 </div>
               </div>
+            </section>
+
+            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[780px]">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Dices className="w-4 h-4 text-indigo-500" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Monte Carlo Simulation</h3>
+                </div>
+                <button
+                  onClick={handleRunSimulation}
+                  disabled={isSimulating}
+                  className={cn(
+                    "px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-400 text-white rounded-lg text-[10px] font-black uppercase transition-all shadow-md",
+                    isSimulating && "animate-pulse"
+                  )}
+                >
+                  {isSimulating ? "Running..." : "Run 10k Sims"}
+                </button>
+              </div>
+
+              {!simulationResult ? (
+                <div className="py-4 text-center">
+                  <p className="text-[10px] text-slate-400 italic">
+                    Run a simulation to see the probability distribution of SLA breaches over a 1-year period.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Breach Probability</span>
+                      <span className={cn(
+                        "text-sm font-black font-mono",
+                        simulationResult.breachProbability > 5 ? "text-red-500" : "text-emerald-500"
+                      )}>
+                        {simulationResult.breachProbability.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className={cn(
+                          "h-full transition-all duration-1000",
+                          simulationResult.breachProbability > 5 ? "bg-red-500" : "bg-emerald-500"
+                        )}
+                        style={{ width: `${Math.min(100, simulationResult.breachProbability)}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-[9px] text-slate-400 leading-tight">
+                      Based on 10,000 yearly runs, there is a {simulationResult.breachProbability.toFixed(2)}% chance you will exceed your downtime budget.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Median Year</span>
+                      <span className="text-[10px] font-mono font-bold dark:text-white">{formatDuration(simulationResult.medianDowntime)}</span>
+                    </div>
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Mean (Avg)</span>
+                      <span className="text-[10px] font-mono font-bold dark:text-white">{formatDuration(simulationResult.meanDowntime)}</span>
+                    </div>
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                      <span className="block text-[8px] font-black text-red-400 uppercase mb-1">P95 (Bad Year)</span>
+                      <span className="text-[10px] font-mono font-bold text-red-500">{formatDuration(simulationResult.p95Downtime)}</span>
+                    </div>
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                      <span className="block text-[8px] font-black text-red-600 uppercase mb-1">P99 (Calamity)</span>
+                      <span className="text-[10px] font-mono font-bold text-red-600">{formatDuration(simulationResult.p99Downtime)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         </div>
