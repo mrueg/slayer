@@ -568,6 +568,23 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           </div>
 
           <div className="flex flex-col gap-1 w-full lg:w-auto">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Protection</label>
+            <button
+              onClick={() => onUpdate(item.id, { hasCircuitBreaker: !item.hasCircuitBreaker })}
+              className={cn(
+                "p-1.5 rounded-lg border transition-all h-[38px] px-3 flex items-center gap-2",
+                item.hasCircuitBreaker 
+                  ? "bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-900/30" 
+                  : "bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700"
+              )}
+              title={item.hasCircuitBreaker ? "Disable Circuit Breaker" : "Enable Circuit Breaker (Fail-Fast)"}
+            >
+              <Zap className={cn("w-3.5 h-3.5", item.hasCircuitBreaker && "fill-amber-500")} />
+              <span className="text-[10px] font-bold uppercase whitespace-nowrap">Breaker</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-1 w-full lg:w-auto">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Input Mode</label>
             <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm h-[38px]">
               <button
