@@ -1140,7 +1140,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         content: [
           { label: "Chaos Mode", text: "Interactive mode to 'Kill' specific components or groups to see real-time blast radius and system degradation." },
           { label: "Blast Radius Heatmap", text: "Visual overlay that colors nodes based on their 'System Health Impact'—see which failures are catastrophic." },
-          { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations to show statistical variance, breach risk, and 'Bad Year' (P95) scenarios." },
+          { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations automatically to show statistical variance, breach risk, and 'Bad Year' (P95) scenarios." },
           { label: "Distribution Histogram", text: "Visual bell curve of all 10,000 simulation outcomes to understand the 'long-tail' risk of your architecture." }
         ]
       }
@@ -1705,6 +1705,14 @@ export default function SLACalculator() {
     };
   }, [root, consumedDowntime, budgetPeriod]);
 
+  // Run simulation automatically when data changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleRunSimulation();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [reliability, overrideTargetSla, compositeSla]);
+
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
     setSimulationResult(null); // Reset simulation when data changes
     if (id === 'root') {
@@ -2019,16 +2027,13 @@ export default function SLACalculator() {
                     <Dices className="w-4 h-4 text-indigo-500" />
                     <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Monte Carlo Simulation</h3>
                   </div>
-                  <button
-                    onClick={handleRunSimulation}
-                    disabled={isSimulating}
-                    className={cn(
-                      "px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-400 text-white rounded-lg text-[10px] font-black uppercase transition-all shadow-md",
-                      isSimulating && "animate-pulse"
-                    )}
-                  >
-                    {isSimulating ? "Running..." : "Run 10k Sims"}
-                  </button>
+                  <div className={cn(
+                    "flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 transition-all",
+                    isSimulating ? "animate-pulse opacity-100" : "opacity-50"
+                  )}>
+                    <div className="w-1 h-1 rounded-full bg-indigo-500 animate-ping" />
+                    Auto-Simulating
+                  </div>
                 </div>
 
                 <div className="mb-4">
