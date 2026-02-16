@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
-  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame, Dices, BarChart3, HelpCircle
+  Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame, Dices, BarChart3, HelpCircle, Play, RotateCw
 } from 'lucide-react';
 import { 
   SLAItem, 
@@ -1319,7 +1319,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
 
             <svg className="w-full h-full min-h-[300px]" viewBox="0 0 1000 300" preserveAspectRatio="none">
               {/* Target SLA Line */}
-              {maxCount > 0 && (
+              {maxCount > 0 && result.distribution[result.distribution.length - 1] > 0 && (
                 <line 
                   x1={(targetDowntime / result.distribution[result.distribution.length - 1]) * 1000} 
                   y1="0" 
@@ -1588,6 +1588,7 @@ export default function ReliabilityModeling() {
   const [simulationResult, setSimulationResult] = useState<MonteCarloResult | null>(null);
   const [overrideTargetSla, setOverrideTargetSla] = useState<number | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [autoSimulate, setAutoSimulate] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
@@ -1732,13 +1733,14 @@ export default function ReliabilityModeling() {
     }, 50);
   }, [reliability, overrideTargetSla, compositeSla]);
 
-  // Run simulation automatically when data changes
+  // Run simulation automatically when data changes (if auto-simulate is on)
   useEffect(() => {
+    if (!autoSimulate) return;
     const timer = setTimeout(() => {
       handleRunSimulation();
     }, 500);
     return () => clearTimeout(timer);
-  }, [handleRunSimulation]);
+  }, [handleRunSimulation, autoSimulate]);
 
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
     setSimulationResult(null); // Reset simulation when data changes
@@ -2054,12 +2056,38 @@ export default function ReliabilityModeling() {
                     <Dices className="w-4 h-4 text-indigo-500" />
                     <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Monte Carlo Simulation</h3>
                   </div>
-                  <div className={cn(
-                    "flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 transition-all",
-                    isSimulating ? "animate-pulse opacity-100" : "opacity-50"
-                  )}>
-                    <div className="w-1 h-1 rounded-full bg-indigo-500 animate-ping" />
-                    Auto-Simulating
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-500 transition-colors">Auto-run</span>
+                      <button 
+                        onClick={() => setAutoSimulate(!autoSimulate)}
+                        className={cn(
+                          "w-6 h-3 rounded-full relative transition-colors duration-200 outline-none",
+                          autoSimulate ? "bg-indigo-500" : "bg-slate-200 dark:bg-slate-700"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all duration-200 shadow-sm",
+                          autoSimulate ? "left-3.5" : "left-0.5"
+                        )} />
+                      </button>
+                    </label>
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 transition-all",
+                      isSimulating ? "animate-pulse opacity-100" : "opacity-50"
+                    )}>
+                      {isSimulating ? (
+                        <>
+                          <RotateCw className="w-2 h-2 animate-spin" />
+                          Simulating
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-1 h-1 rounded-full bg-indigo-500" />
+                          Ready
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -2087,12 +2115,25 @@ export default function ReliabilityModeling() {
                   </div>
                 </div>
 
+                {!autoSimulate && (
+                  <button
+                    onClick={handleRunSimulation}
+                    disabled={isSimulating}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-50 active:scale-[0.98]"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Run Yearly Simulation
+                  </button>
+                )}
+
                 {!simulationResult ? (
-                  <div className="py-2 text-center">
-                    <p className="text-[10px] text-slate-400 italic">
-                      Run 10,000 yearly runs to see probabilistic breach risk.
-                    </p>
-                  </div>
+                  autoSimulate ? (
+                    <div className="py-2 text-center">
+                      <p className="text-[10px] text-slate-400 italic">
+                        Waiting for data changes...
+                      </p>
+                    </div>
+                  ) : null
                 ) : (
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">

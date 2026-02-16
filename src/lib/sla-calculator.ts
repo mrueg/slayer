@@ -598,10 +598,19 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
     }
 
     let yearlyDowntime = 0;
-    for (let j = 0; j < numIncidents; j++) {
-      yearlyDowntime += -Math.log(1 - Math.random()) * mttr;
+    if (numIncidents > 100) {
+      // Normal approximation of Gamma distribution for large n
+      const mean = numIncidents * mttr;
+      const stdDev = Math.sqrt(numIncidents) * mttr;
+      const standardNormal = Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
+      yearlyDowntime = Math.max(0, mean + standardNormal * stdDev);
+    } else {
+      for (let j = 0; j < numIncidents; j++) {
+        yearlyDowntime += -Math.log(1 - Math.random()) * mttr;
+      }
     }
 
+    yearlyDowntime = Math.min(YEAR_MINUTES, yearlyDowntime);
     downtimes.push(yearlyDowntime);
     if (yearlyDowntime > allowedDowntimeMinutes) {
       breaches++;
@@ -666,6 +675,15 @@ export const getHistogramData = (distribution: number[], bins: number = 40): { b
   const min = distribution[0];
   const max = distribution[distribution.length - 1];
   const range = max - min;
+
+  if (range === 0) {
+    return [{
+      bin: min.toFixed(2),
+      count: distribution.length,
+      label: formatDuration(min)
+    }];
+  }
+  
   const binSize = range / bins;
   
   const histogram: { count: number, start: number, end: number }[] = [];
