@@ -766,7 +766,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   ? "bg-red-600 border-red-700 text-white" 
                   : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
               )}
-              title={isDown || isDegraded ? "Restore Component" : "Fail Component"}
+              title={isDown || isDegraded ? "Restore Component" : "Kill Component"}
             >
               {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
               <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
@@ -824,14 +824,16 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       type: 'group',
       config: 'series',
       children: [
-        { id: 'dns', name: 'Route53 DNS', type: 'component', sla: 100, replicas: 1, notes: "AWS provides 100% SLA for Route53 DNS.", mttr: 5 },
-        { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1, notes: "Includes edge locations and global delivery.", mttr: 45 },
+        { id: 'dns', name: 'Route53 DNS', type: 'component', sla: 100, replicas: 1, rto: 5, rpo: 0, notes: "AWS provides 100% SLA for Route53 DNS.", mttr: 5 },
+        { id: 'cdn', name: 'CloudFront CDN', type: 'component', sla: 99.9, replicas: 1, rto: 15, rpo: 0, notes: "Includes edge locations and global delivery.", mttr: 45 },
         { 
           id: 'frontend', 
           name: 'Frontend Assets (S3)', 
           type: 'component', 
           sla: 99.9, 
           replicas: 1,
+          rto: 30,
+          rpo: 60,
           notes: "Static hosting in US-East-1.",
           mttr: 60
         },
@@ -842,9 +844,9 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'series',
           notes: "Core transactional path.",
           children: [
-            { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 2, minReplicasRequired: 1, mttr: 15 },
-            { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 3, minReplicasRequired: 2, mttr: 10 },
-            { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1, notes: "Global tables with multi-region replication.", mttr: 5 },
+            { id: 'api-g', name: 'API Gateway', type: 'component', sla: 99.95, replicas: 2, minReplicasRequired: 1, rto: 10, rpo: 0, mttr: 15 },
+            { id: 'lambda', name: 'Lambda (Compute)', type: 'component', sla: 99.95, replicas: 3, minReplicasRequired: 2, rto: 5, rpo: 0, mttr: 10 },
+            { id: 'dynamo', name: 'DynamoDB (Global)', type: 'component', sla: 99.999, replicas: 1, rto: 15, rpo: 5, notes: "Global tables with multi-region replication.", mttr: 5 },
           ]
         },
         { 
@@ -854,6 +856,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           sla: 99.9, 
           replicas: 1,
           isOptional: true,
+          rto: 120,
+          rpo: 1440,
           notes: "Non-critical tracking. System remains functional if this fails.",
           mttr: 30
         },
@@ -876,6 +880,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'component', 
           sla: 99.95, 
           replicas: 1,
+          rto: 30,
+          rpo: 0,
           notes: "Single-instance SLA for RDS.",
           mttr: 60
         },
@@ -885,6 +891,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'component', 
           sla: 99.95, 
           replicas: 1,
+          rto: 5,
+          rpo: 0,
           notes: "Synchronous replication enabled.",
           mttr: 60
         },
@@ -895,6 +903,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           sla: 99.9, 
           replicas: 1,
           isOptional: true,
+          rto: 240,
+          rpo: 1440,
           notes: "Daily snapshots. RTO: 4 hours.",
           mttr: 240
         },
@@ -918,8 +928,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           failoverSla: 99.999,
           notes: "Dual utility feeds with automatic ATS.",
           children: [
-            { id: 'grid', name: 'Utility Grid Feed', type: 'component', sla: 99.9, replicas: 1, notes: "Reliability of local municipality feed.", mttr: 120 },
-            { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2, notes: "N+1 configuration with 48h fuel supply.", mttr: 15 },
+            { id: 'grid', name: 'Utility Grid Feed', type: 'component', sla: 99.9, replicas: 1, rto: 240, rpo: 0, notes: "Reliability of local municipality feed.", mttr: 120 },
+            { id: 'gen', name: 'Diesel Generators', type: 'component', sla: 99.0, replicas: 2, rto: 1, rpo: 0, notes: "N+1 configuration with 48h fuel supply.", mttr: 15 },
           ]
         },
         {
@@ -929,8 +939,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'parallel',
           notes: "Maintained at 22°C +/- 2°C.",
           children: [
-            { id: 'chiller-1', name: 'Chiller A', type: 'component', sla: 99.5, replicas: 1, mttr: 180 },
-            { id: 'chiller-2', name: 'Chiller B', type: 'component', sla: 99.5, replicas: 1, mttr: 180 },
+            { id: 'chiller-1', name: 'Chiller A', type: 'component', sla: 99.5, replicas: 1, rto: 120, rpo: 0, mttr: 180 },
+            { id: 'chiller-2', name: 'Chiller B', type: 'component', sla: 99.5, replicas: 1, rto: 120, rpo: 0, mttr: 180 },
           ]
         },
         {
@@ -940,8 +950,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'series',
           notes: "Fully redundant 100G core.",
           children: [
-            { id: 'edge-router', name: 'Border Routers', type: 'component', sla: 99.99, replicas: 2, mttr: 30 },
-            { id: 'core-switch', name: 'Core Switches', type: 'component', sla: 99.99, replicas: 2, mttr: 30 },
+            { id: 'edge-router', name: 'Border Routers', type: 'component', sla: 99.99, replicas: 2, rto: 15, rpo: 0, mttr: 30 },
+            { id: 'core-switch', name: 'Core Switches', type: 'component', sla: 99.99, replicas: 2, rto: 15, rpo: 0, mttr: 30 },
           ]
         },
         {
@@ -951,8 +961,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           config: 'parallel',
           notes: "Virtualized workload clusters.",
           children: [
-            { id: 'rack-1', name: 'Rack A (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1, mttr: 120 },
-            { id: 'rack-2', name: 'Rack B (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1, mttr: 120 },
+            { id: 'rack-1', name: 'Rack A (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1, rto: 60, rpo: 15, mttr: 120 },
+            { id: 'rack-2', name: 'Rack B (Blade Chassis)', type: 'component', sla: 99.9, replicas: 1, rto: 60, rpo: 15, mttr: 120 },
           ]
         }
       ]
@@ -967,7 +977,7 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       config: 'series',
       notes: "Multi-region active-active deployment.",
       children: [
-        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 100, replicas: 1, notes: "Global entry point.", mttr: 5 },
+        { id: 'global-dns', name: 'Route53 Latency Routing', type: 'component', sla: 100, replicas: 1, rto: 5, rpo: 0, notes: "Global entry point.", mttr: 5 },
         {
           id: 'regions',
           name: 'Regional Deployments',
@@ -976,12 +986,12 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           failoverSla: 99.9,
           notes: "Automatic failover between regions.",
           children: [
-            { id: 'us-east', name: 'US-East Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Northern Virginia cluster.", mttr: 30 },
-            { id: 'eu-west', name: 'EU-West Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Ireland cluster.", mttr: 30 },
-            { id: 'ap-south', name: 'AP-South Region (AWS)', type: 'component', sla: 99.99, replicas: 1, notes: "Mumbai cluster.", mttr: 30 },
+            { id: 'us-east', name: 'US-East Region (AWS)', type: 'component', sla: 99.99, replicas: 1, rto: 30, rpo: 0, notes: "Northern Virginia cluster.", mttr: 30 },
+            { id: 'eu-west', name: 'EU-West Region (AWS)', type: 'component', sla: 99.99, replicas: 1, rto: 30, rpo: 0, notes: "Ireland cluster.", mttr: 30 },
+            { id: 'ap-south', name: 'AP-South Region (AWS)', type: 'component', sla: 99.99, replicas: 1, rto: 30, rpo: 0, notes: "Mumbai cluster.", mttr: 30 },
           ]
         },
-        { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1, notes: "Storage-level cross-region replication.", mttr: 10 },
+        { id: 'global-db', name: 'Aurora Global Database', type: 'component', sla: 99.99, replicas: 1, rto: 15, rpo: 1, notes: "Storage-level cross-region replication.", mttr: 10 },
       ]
     }
   },
@@ -1000,8 +1010,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           type: 'group',
           config: 'series',
           children: [
-            { id: 'dns', name: 'Global DNS', type: 'component', sla: 100, replicas: 1, icon: 'globe', mttr: 5 },
-            { id: 'waf', name: 'WAF & DDoS Shield', type: 'component', sla: 99.99, replicas: 1, icon: 'shield', mttr: 15 },
+            { id: 'dns', name: 'Global DNS', type: 'component', sla: 100, replicas: 1, rto: 5, rpo: 0, icon: 'globe', mttr: 5 },
+            { id: 'waf', name: 'WAF & DDoS Shield', type: 'component', sla: 99.99, replicas: 1, rto: 15, rpo: 0, icon: 'shield', mttr: 15 },
           ]
         },
         {
@@ -1019,9 +1029,9 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
               minChildrenRequired: 2,
               notes: "High-availability etcd and API server cluster.",
               children: [
-                { id: 'master-1', name: 'Control Node 1', type: 'component', sla: 99.95, replicas: 1, icon: 'cpu', mttr: 30 },
-                { id: 'master-2', name: 'Control Node 2', type: 'component', sla: 99.95, replicas: 1, icon: 'cpu', mttr: 30 },
-                { id: 'master-3', name: 'Control Node 3', type: 'component', sla: 99.95, replicas: 1, icon: 'cpu', mttr: 30 },
+                { id: 'master-1', name: 'Control Node 1', type: 'component', sla: 99.95, replicas: 1, rto: 10, rpo: 0, icon: 'cpu', mttr: 30 },
+                { id: 'master-2', name: 'Control Node 2', type: 'component', sla: 99.95, replicas: 1, rto: 10, rpo: 0, icon: 'cpu', mttr: 30 },
+                { id: 'master-3', name: 'Control Node 3', type: 'component', sla: 99.95, replicas: 1, rto: 10, rpo: 0, icon: 'cpu', mttr: 30 },
               ]
             },
             {
@@ -1032,9 +1042,9 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
               minChildrenRequired: 2,
               notes: "Requires at least 2 functional node groups for capacity.",
               children: [
-                { id: 'ng-1', name: 'Node Group A (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15 },
-                { id: 'ng-2', name: 'Node Group B (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15 },
-                { id: 'ng-3', name: 'Node Group C (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15 },
+                { id: 'ng-1', name: 'Node Group A (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, rto: 15, rpo: 5, icon: 'layers', mttr: 15 },
+                { id: 'ng-2', name: 'Node Group B (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, rto: 15, rpo: 5, icon: 'layers', mttr: 15 },
+                { id: 'ng-3', name: 'Node Group C (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, rto: 15, rpo: 5, icon: 'layers', mttr: 15 },
               ]
             }
           ]
@@ -1053,8 +1063,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
               config: 'parallel',
               failoverSla: 99.999,
               children: [
-                { id: 'grid', name: 'Utility Grid Feed', type: 'component', sla: 99.9, replicas: 1, icon: 'zapOff', mttr: 240 },
-                { id: 'diesel', name: 'N+1 Diesel Generators', type: 'component', sla: 99.0, replicas: 2, minReplicasRequired: 1, icon: 'zapOff', mttr: 10 },
+                { id: 'grid', name: 'Utility Grid Feed', type: 'component', sla: 99.9, replicas: 1, rto: 480, rpo: 0, icon: 'zapOff', mttr: 240 },
+                { id: 'diesel', name: 'N+1 Diesel Generators', type: 'component', sla: 99.0, replicas: 2, minReplicasRequired: 1, rto: 1, rpo: 0, icon: 'zapOff', mttr: 10 },
               ]
             },
             {
@@ -1064,8 +1074,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
               config: 'series',
               notes: "Non-blocking high-speed fabric.",
               children: [
-                { id: 'spine', name: 'Core Spine Switches', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, icon: 'network', mttr: 60 },
-                { id: 'leaf', name: 'Top-of-Rack Leaf Switches', type: 'component', sla: 99.99, replicas: 2, minReplicasRequired: 1, icon: 'network', mttr: 30 },
+                { id: 'spine', name: 'Core Spine Switches', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, rto: 30, rpo: 0, icon: 'network', mttr: 60 },
+                { id: 'leaf', name: 'Top-of-Rack Leaf Switches', type: 'component', sla: 99.99, replicas: 2, minReplicasRequired: 1, rto: 15, rpo: 0, icon: 'network', mttr: 30 },
               ]
             },
             {
@@ -1082,8 +1092,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
                   type: 'group',
                   config: 'series',
                   children: [
-                    { id: 'pdu-a', name: 'Dual PDUs', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, icon: 'zap', mttr: 120 },
-                    { id: 'blades-a', name: 'Blade Chassis (16 Nodes)', type: 'component', sla: 99.9, replicas: 16, minReplicasRequired: 12, icon: 'server', mttr: 45 }
+                    { id: 'pdu-a', name: 'Dual PDUs', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, rto: 120, rpo: 0, icon: 'zap', mttr: 120 },
+                    { id: 'blades-a', name: 'Blade Chassis (16 Nodes)', type: 'component', sla: 99.9, replicas: 16, minReplicasRequired: 12, rto: 45, rpo: 15, icon: 'server', mttr: 45 }
                   ]
                 },
                 {
@@ -1092,8 +1102,8 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
                   type: 'group',
                   config: 'series',
                   children: [
-                    { id: 'pdu-b', name: 'Dual PDUs', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, icon: 'zap', mttr: 120 },
-                    { id: 'blades-b', name: 'Blade Chassis (16 Nodes)', type: 'component', sla: 99.9, replicas: 16, minReplicasRequired: 12, icon: 'server', mttr: 45 }
+                    { id: 'pdu-b', name: 'Dual PDUs', type: 'component', sla: 99.999, replicas: 2, minReplicasRequired: 1, rto: 120, rpo: 0, icon: 'zap', mttr: 120 },
+                    { id: 'blades-b', name: 'Blade Chassis (16 Nodes)', type: 'component', sla: 99.9, replicas: 16, minReplicasRequired: 12, rto: 45, rpo: 15, icon: 'server', mttr: 45 }
                   ]
                 }
               ]
@@ -1354,7 +1364,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
 };
 
 const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => void }> = ({ steps, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'sla' | 'mttr'>('sla');
+  const [activeTab, setActiveTab] = useState<'sla' | 'mttr' | 'dr'>('sla');
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1397,6 +1407,15 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
             >
               MTTR & Frequency
             </button>
+            <button
+              onClick={() => setActiveTab('dr')}
+              className={cn(
+                "px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all",
+                activeTab === 'dr' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              )}
+            >
+              Disaster Recovery
+            </button>
           </div>
         </div>
         
@@ -1429,7 +1448,7 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                         </span>
                       </div>
                     </>
-                  ) : (
+                  ) : activeTab === 'mttr' ? (
                     <>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                         <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">System MTTR</span>
@@ -1441,6 +1460,21 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                         <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Est. Frequency</span>
                         <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
                           {(step.frequencyResult || 0).toFixed(2)}/yr
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step RTO</span>
+                        <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
+                          {formatDuration(step.rtoResult || 0)}
+                        </span>
+                      </div>
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step RPO</span>
+                        <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
+                          {formatDuration(step.rpoResult || 0)}
                         </span>
                       </div>
                     </>
@@ -1476,7 +1510,9 @@ export default function SLACalculator() {
         name: 'Global DNS (Route53)', 
         type: 'component', 
         sla: 99.99, 
-        replicas: 1 
+        replicas: 1,
+        rto: 5,
+        rpo: 0
       },
       { 
         id: 'ingress', 
@@ -1484,8 +1520,8 @@ export default function SLACalculator() {
         type: 'group', 
         config: 'parallel', 
         children: [
-          { id: 'lb-1', name: 'Primary Load Balancer', type: 'component', sla: 99.99, replicas: 1 },
-          { id: 'lb-2', name: 'Secondary Load Balancer', type: 'component', sla: 99.99, replicas: 1 },
+          { id: 'lb-1', name: 'Primary Load Balancer', type: 'component', sla: 99.99, replicas: 1, rto: 15, rpo: 0 },
+          { id: 'lb-2', name: 'Secondary Load Balancer', type: 'component', sla: 99.99, replicas: 1, rto: 15, rpo: 0 },
         ]
       },
       {
@@ -1499,14 +1535,18 @@ export default function SLACalculator() {
             name: 'API Microservices', 
             type: 'component', 
             sla: 99.9, 
-            replicas: 3 
+            replicas: 3,
+            rto: 10,
+            rpo: 0
           },
           { 
             id: 'auth-service', 
             name: 'Auth Service', 
             type: 'component', 
             sla: 99.95, 
-            replicas: 2 
+            replicas: 2,
+            rto: 5,
+            rpo: 0
           },
         ]
       },
@@ -1516,8 +1556,8 @@ export default function SLACalculator() {
         type: 'group',
         config: 'parallel',
         children: [
-          { id: 'db-primary', name: 'Aurora Primary', type: 'component', sla: 99.95, replicas: 1 },
-          { id: 'db-replica', name: 'Aurora Replica', type: 'component', sla: 99.95, replicas: 1 },
+          { id: 'db-primary', name: 'Aurora Primary', type: 'component', sla: 99.95, replicas: 1, rto: 30, rpo: 0 },
+          { id: 'db-replica', name: 'Aurora Replica', type: 'component', sla: 99.95, replicas: 1, rto: 5, rpo: 0 },
         ]
       }
     ]
@@ -2026,7 +2066,7 @@ export default function SLACalculator() {
                       max="100"
                       value={overrideTargetSla !== null ? overrideTargetSla : compositeSla}
                       onChange={(e) => setOverrideTargetSla(parseFloat(e.target.value))}
-                      className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-sm dark:text-slate-200"
+                      className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                       placeholder={compositeSla.toString()}
                     />
                     {overrideTargetSla !== null && (

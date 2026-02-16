@@ -25,11 +25,6 @@ export interface SLAItem {
   rpo?: number; // Recovery Point Objective in minutes
 }
 
-export interface DRResult {
-  rto: number;
-  rpo: number;
-}
-
 export interface CalculationResult {
   compositeSla: number;
   downtimePerYear: number;
@@ -117,6 +112,11 @@ export interface ReliabilityResult {
   sla: number;
   frequency: number; // incidents per year
   mttr: number; // minutes
+}
+
+export interface DRResult {
+  rto: number;
+  rpo: number;
 }
 
 export const calculateDRMetrics = (item: SLAItem): DRResult => {
@@ -432,6 +432,8 @@ export interface CalculationStep {
   result: number;
   mttrResult?: number;
   frequencyResult?: number;
+  rtoResult?: number;
+  rpoResult?: number;
 }
 
 export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
@@ -445,12 +447,15 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
       inputValues: [],
       result: 100,
       mttrResult: 0,
-      frequencyResult: 0
+      frequencyResult: 0,
+      rtoResult: 0,
+      rpoResult: 0
     }];
   }
 
   const steps: CalculationStep[] = [];
   const rel = calculateReliability(item);
+  const dr = calculateDRMetrics(item);
 
   if (item.type === 'component') {
     const baseSla = item.sla ?? 100;
@@ -468,7 +473,9 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
         inputValues: [`Base MTTR: ${baseMttr}m`, `Min Required: ${k}`],
         result: rel.sla,
         mttrResult: rel.mttr,
-        frequencyResult: rel.frequency
+        frequencyResult: rel.frequency,
+        rtoResult: dr.rto,
+        rpoResult: dr.rpo
       });
     } else {
       steps.push({
@@ -480,7 +487,9 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
         inputValues: [`MTTR: ${baseMttr}m`],
         result: baseSla,
         mttrResult: baseMttr,
-        frequencyResult: rel.frequency
+        frequencyResult: rel.frequency,
+        rtoResult: dr.rto,
+        rpoResult: dr.rpo
       });
     }
   } else {
@@ -495,7 +504,9 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
         inputValues: [],
         result: 100,
         mttrResult: 0,
-        frequencyResult: 0
+        frequencyResult: 0,
+        rtoResult: 0,
+        rpoResult: 0
       });
     } else {
       children.forEach(child => steps.push(...getCalculationSteps(child)));
@@ -509,11 +520,13 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
           name: item.name,
           type: item.type,
           formula: `Product of child SLAs | Sum of child frequencies`,
-          explanation: `Series: The system fails if ANY component fails. Total frequency is additive.`,
+          explanation: `Series: Sequential recovery (Sum of RTO) and weakest link data loss (Max RPO).`,
           inputValues: childRels.map(r => `${formatSLAPercentage(r.sla)}% (${r.frequency.toFixed(2)} freq)`),
           result: rel.sla,
           mttrResult: rel.mttr,
-          frequencyResult: rel.frequency
+          frequencyResult: rel.frequency,
+          rtoResult: dr.rto,
+          rpoResult: dr.rpo
         });
       } else {
         steps.push({
@@ -521,11 +534,13 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
           name: item.name,
           type: item.type,
           formula: `${k}-out-of-${children.length} Redundancy`,
-          explanation: `Parallel: The system only fails if more than ${children.length - k} components fail.`,
+          explanation: `Parallel: Minimum time to recover any path (Min RTO) and freshest data path (Min RPO).`,
           inputValues: childRels.map(r => `${formatSLAPercentage(r.sla)}%`),
           result: rel.sla,
           mttrResult: rel.mttr,
-          frequencyResult: rel.frequency
+          frequencyResult: rel.frequency,
+          rtoResult: dr.rto,
+          rpoResult: dr.rpo
         });
       }
     }
