@@ -17,7 +17,6 @@ export interface SLAItem {
   failoverSla?: number; // Failover reliability for parallel groups
   isOptional?: boolean; // If true, this item doesn't count against the total SLA
   failedReplicas?: number; // Number of replicas that are currently DOWN (Chaos Mode)
-  hasCircuitBreaker?: boolean; // Fail-fast protection
   children?: SLAItem[]; // For groups
   inputMode?: InputMode;
   downtimeValue?: number; // in seconds
@@ -140,11 +139,7 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
     const frequency = baseFrequency * Math.pow((baseFrequency * baseMttr) / YEAR_MINUTES, working - kRequired) * (working / kRequired);
     const mttr = baseMttr / (working - kRequired + 1);
 
-    // Circuit Breaker Modeling: Fail-fast behavior reduces the "Impact MTTR" on the system
-    // by preventing hanging connections and long timeouts.
-    const effectiveMttr = item.hasCircuitBreaker ? mttr * 0.2 : mttr;
-
-    return { sla, frequency, mttr: effectiveMttr };
+    return { sla, frequency, mttr };
   }
 
   const children = item.children || [];
@@ -430,8 +425,8 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
         id: item.id,
         name: item.name,
         type: item.type,
-        formula: `${k}-out-of-${replicas} Redundancy` + (item.hasCircuitBreaker ? " + Fail-Fast" : ""),
-        explanation: `${replicas}x Redundancy: SLA improved by parallel replicas, MTTR reduced.` + (item.hasCircuitBreaker ? " Circuit Breaker further reduces impact recovery time by 80%." : ""),
+        formula: `${k}-out-of-${replicas} Redundancy`,
+        explanation: `${replicas}x Redundancy: SLA improved by parallel replicas, MTTR reduced.`,
         inputValues: [`Base MTTR: ${baseMttr}m`, `Min Required: ${k}`],
         result: rel.sla,
         mttrResult: rel.mttr,
@@ -442,11 +437,11 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
         id: item.id,
         name: item.name,
         type: item.type,
-        formula: `${baseSla}%` + (item.hasCircuitBreaker ? " [Fail-Fast]" : ""),
-        explanation: `Base component metrics.` + (item.hasCircuitBreaker ? " Circuit Breaker reduces impact recovery time by 80% via fast-failing timeouts." : ""),
+        formula: `${baseSla}%`,
+        explanation: `Base component metrics.`,
         inputValues: [`MTTR: ${baseMttr}m`],
         result: baseSla,
-        mttrResult: rel.mttr,
+        mttrResult: baseMttr,
         frequencyResult: rel.frequency
       });
     }

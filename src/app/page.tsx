@@ -621,23 +621,6 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           </div>
 
           <div className="flex flex-col gap-1 w-full lg:w-auto">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Protection</label>
-            <button
-              onClick={() => onUpdate(item.id, { hasCircuitBreaker: !item.hasCircuitBreaker })}
-              className={cn(
-                "p-1.5 rounded-lg border transition-all h-[38px] px-3 flex items-center gap-2",
-                item.hasCircuitBreaker 
-                  ? "bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-900/30" 
-                  : "bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700"
-              )}
-              title={item.hasCircuitBreaker ? "Disable Circuit Breaker" : "Enable Circuit Breaker (Fail-Fast)"}
-            >
-              <Zap className={cn("w-3.5 h-3.5", item.hasCircuitBreaker && "fill-amber-500")} />
-              <span className="text-[10px] font-bold uppercase whitespace-nowrap">Breaker</span>
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-1 w-full lg:w-auto">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Input Mode</label>
             <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm h-[38px]">
               <button
@@ -757,7 +740,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   ? "bg-red-600 border-red-700 text-white" 
                   : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
               )}
-              title={isDown || isDegraded ? "Restore Component" : "Kill Component"}
+              title={isDown || isDegraded ? "Restore Component" : "Fail Component"}
             >
               {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
               <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
@@ -1023,9 +1006,9 @@ const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
               minChildrenRequired: 2,
               notes: "Requires at least 2 functional node groups for capacity.",
               children: [
-                { id: 'ng-1', name: 'Node Group A (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15, hasCircuitBreaker: true },
-                { id: 'ng-2', name: 'Node Group B (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15, hasCircuitBreaker: true },
-                { id: 'ng-3', name: 'Node Group C (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15, hasCircuitBreaker: true },
+                { id: 'ng-1', name: 'Node Group A (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15 },
+                { id: 'ng-2', name: 'Node Group B (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15 },
+                { id: 'ng-3', name: 'Node Group C (m5.large)', type: 'component', sla: 99.9, replicas: 5, minReplicasRequired: 3, icon: 'layers', mttr: 15 },
               ]
             }
           ]
@@ -1140,7 +1123,6 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         icon: <Component className="w-4 h-4 text-blue-500" />,
         content: [
           { label: "Critical/Optional", text: "Toggle whether a component is critical. Optional items are ignored in the total SLA calculation." },
-          { label: "Breaker (Zap)", text: "Enables a Circuit Breaker. Reduces the MTTR impact by 80% by preventing hanging connections during failures." },
           { label: "Kill / Restore", text: "In Chaos Mode, injects failures. If multiple replicas exist, you can choose how many to fail." },
           { label: "Lookup (Search)", text: "Opens the Cloud SLA Catalog to auto-fill metrics for standard AWS/GCP/Azure services." }
         ]

@@ -171,12 +171,6 @@ const TopologyNode: React.FC<{
               OPTIONAL
             </div>
           )}
-          {item.hasCircuitBreaker && !isDown && !isDegraded && (
-            <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
-              <Zap className="w-2 h-2 fill-white" />
-              FAIL-FAST
-            </div>
-          )}
           <div className="flex items-center gap-3 mb-3">
             <div className={cn(
               "p-1.5 rounded-lg transition-colors duration-500",
