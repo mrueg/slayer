@@ -2006,92 +2006,172 @@ export default function SLACalculator() {
               </div>
             </section>
 
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[480px]">
-              <div className="flex items-center gap-2 mb-4">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Disaster Recovery (DR) Goals</h3>
+            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[480px] space-y-8">
+              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
+                <Activity className="w-4 h-4 text-blue-500" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Operational Analysis</h3>
               </div>
-              
-              <div className="space-y-6">
+
+              {/* Monte Carlo Simulation (Promoted to Top) */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Dices className="w-4 h-4 text-indigo-500" />
+                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Monte Carlo Simulation</h3>
+                  </div>
+                  <button
+                    onClick={handleRunSimulation}
+                    disabled={isSimulating}
+                    className={cn(
+                      "px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-400 text-white rounded-lg text-[10px] font-black uppercase transition-all shadow-md",
+                      isSimulating && "animate-pulse"
+                    )}
+                  >
+                    {isSimulating ? "Running..." : "Run 10k Sims"}
+                  </button>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target SLA for Simulation (%)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      max="100"
+                      value={overrideTargetSla !== null ? overrideTargetSla : compositeSla}
+                      onChange={(e) => setOverrideTargetSla(parseFloat(e.target.value))}
+                      className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-sm dark:text-slate-200"
+                      placeholder={compositeSla.toString()}
+                    />
+                    {overrideTargetSla !== null && (
+                      <button 
+                        onClick={() => setOverrideTargetSla(null)}
+                        className="text-[10px] font-bold text-indigo-500 hover:text-indigo-400 uppercase whitespace-nowrap"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {!simulationResult ? (
+                  <div className="py-2 text-center">
+                    <p className="text-[10px] text-slate-400 italic">
+                      Run 10,000 yearly runs to see probabilistic breach risk.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Breach Probability</span>
+                        <span className={cn(
+                          "text-sm font-black font-mono",
+                          simulationResult.breachProbability > 5 ? "text-red-500" : "text-emerald-500"
+                        )}>
+                          {simulationResult.breachProbability.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full transition-all duration-1000",
+                            simulationResult.breachProbability > 5 ? "bg-red-500" : "bg-emerald-500"
+                          )}
+                          style={{ width: `${Math.min(100, simulationResult.breachProbability)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                        <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Median Year</span>
+                        <span className="text-[10px] font-mono font-bold dark:text-white">{formatDuration(simulationResult.medianDowntime)}</span>
+                      </div>
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                        <span className="block text-[8px] font-black text-red-400 uppercase mb-1">P95 (Bad Year)</span>
+                        <span className="text-[10px] font-mono font-bold text-red-500">{formatDuration(simulationResult.p95Downtime)}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setShowHistogram(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase transition-all"
+                    >
+                      <BarChart3 className="w-3 h-3" />
+                      View Distribution
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="h-[1px] bg-slate-100 dark:bg-slate-700" />
+
+              {/* Disaster Recovery Goals */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">DR Goals (RTO/RPO)</h3>
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RTO (min)</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RTO</label>
                     <input
                       type="number"
                       min="0"
                       value={targetRto}
                       onChange={(e) => setTargetRto(parseInt(e.target.value) || 0)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RPO (min)</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RPO</label>
                     <input
                       type="number"
                       min="0"
                       value={targetRpo}
                       onChange={(e) => setTargetRpo(parseInt(e.target.value) || 0)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="p-3 rounded-xl border flex items-center justify-between transition-all" style={{ 
-                    backgroundColor: drMetrics.rto <= targetRto ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
-                    borderColor: drMetrics.rto <= targetRto ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'
-                  }}>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase text-slate-400">Actual System RTO</span>
-                      <span className={cn("text-sm font-mono font-black", drMetrics.rto <= targetRto ? "text-emerald-600" : "text-red-600")}>
-                        {formatDuration(drMetrics.rto)}
-                      </span>
-                    </div>
-                    <div className={cn(
-                      "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                      drMetrics.rto <= targetRto ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                    )}>
-                      {drMetrics.rto <= targetRto ? "GOAL MET" : "EXCEEDED"}
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-bold text-slate-400 uppercase">System RTO:</span>
+                    <span className={cn("font-mono font-black", drMetrics.rto <= targetRto ? "text-emerald-600" : "text-red-600")}>
+                      {formatDuration(drMetrics.rto)} {drMetrics.rto <= targetRto ? "✓" : "!!"}
+                    </span>
                   </div>
-
-                  <div className="p-3 rounded-xl border flex items-center justify-between transition-all" style={{ 
-                    backgroundColor: drMetrics.rpo <= targetRpo ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
-                    borderColor: drMetrics.rpo <= targetRpo ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'
-                  }}>
-                    <div>
-                      <span className="block text-[9px] font-black uppercase text-slate-400">Actual System RPO</span>
-                      <span className={cn("text-sm font-mono font-black", drMetrics.rpo <= targetRpo ? "text-emerald-600" : "text-red-600")}>
-                        {formatDuration(drMetrics.rpo)}
-                      </span>
-                    </div>
-                    <div className={cn(
-                      "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                      drMetrics.rpo <= targetRpo ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                    )}>
-                      {drMetrics.rpo <= targetRpo ? "GOAL MET" : "EXCEEDED"}
-                    </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-bold text-slate-400 uppercase">System RPO:</span>
+                    <span className={cn("font-mono font-black", drMetrics.rpo <= targetRpo ? "text-emerald-600" : "text-red-600")}>
+                      {formatDuration(drMetrics.rpo)} {drMetrics.rpo <= targetRpo ? "✓" : "!!"}
+                    </span>
                   </div>
                 </div>
               </div>
-            </section>
 
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[780px]">
-              <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-4 h-4 text-blue-500" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget Calculator</h3>
-              </div>
-              
+              <div className="h-[1px] bg-slate-100 dark:bg-slate-700" />
+
+              {/* Error Budget Calculator */}
               <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-blue-500" />
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget</h3>
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (sec)</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (s)</label>
                     <input
                       type="number"
                       min="0"
                       value={consumedDowntime}
                       onChange={(e) => setConsumedDowntime(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                     />
                   </div>
                   <div>
@@ -2099,7 +2179,7 @@ export default function SLACalculator() {
                     <select
                       value={budgetPeriod}
                       onChange={(e) => setBudgetPeriod(e.target.value as DowntimePeriod)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[34px] dark:text-slate-200"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[10px] h-[34px] dark:text-slate-200 font-bold uppercase"
                     >
                       <option value="day">Day</option>
                       <option value="month">Month</option>
@@ -2108,17 +2188,17 @@ export default function SLACalculator() {
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Remaining Budget</span>
+                <div>
+                  <div className="flex justify-between items-end mb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Remaining Budget</span>
                     <span className={cn(
-                      "font-mono font-bold text-sm",
+                      "font-mono font-bold text-xs",
                       errorBudget.isBreached ? "text-red-500" : "text-emerald-500"
                     )}>
                       {errorBudget.isBreached ? "BREACHED" : formatDuration(errorBudget.remainingSeconds / 60)}
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
                     <div 
                       className={cn(
                         "h-full transition-all duration-500",
@@ -2129,118 +2209,8 @@ export default function SLACalculator() {
                       }}
                     />
                   </div>
-                  <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 italic">
-                    Total {budgetPeriod}ly budget: {formatDuration(errorBudget.totalBudgetSeconds / 60)}
-                  </p>
                 </div>
               </div>
-            </section>
-
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[1080px]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Dices className="w-4 h-4 text-indigo-500" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Monte Carlo Simulation</h3>
-                </div>
-                <button
-                  onClick={handleRunSimulation}
-                  disabled={isSimulating}
-                  className={cn(
-                    "px-3 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-400 text-white rounded-lg text-[10px] font-black uppercase transition-all shadow-md",
-                    isSimulating && "animate-pulse"
-                  )}
-                >
-                  {isSimulating ? "Running..." : "Run 10k Sims"}
-                </button>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target SLA for Simulation (%)</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    max="100"
-                    value={overrideTargetSla !== null ? overrideTargetSla : compositeSla}
-                    onChange={(e) => setOverrideTargetSla(parseFloat(e.target.value))}
-                    className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-sm dark:text-slate-200"
-                    placeholder={compositeSla.toString()}
-                  />
-                  {overrideTargetSla !== null && (
-                    <button 
-                      onClick={() => setOverrideTargetSla(null)}
-                      className="text-[10px] font-bold text-indigo-500 hover:text-indigo-400 uppercase whitespace-nowrap"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-                <p className="mt-1.5 text-[9px] text-slate-400 leading-tight italic">
-                  Default is system SLA ({formatSLAPercentage(compositeSla)}%). Change this to see risk vs a different contractual goal.
-                </p>
-              </div>
-
-              {!simulationResult ? (
-                <div className="py-4 text-center">
-                  <p className="text-[10px] text-slate-400 italic">
-                    Run a simulation to see the probability distribution of SLA breaches over a 1-year period.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Breach Probability</span>
-                      <span className={cn(
-                        "text-sm font-black font-mono",
-                        simulationResult.breachProbability > 5 ? "text-red-500" : "text-emerald-500"
-                      )}>
-                        {simulationResult.breachProbability.toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full transition-all duration-1000",
-                          simulationResult.breachProbability > 5 ? "bg-red-500" : "bg-emerald-500"
-                        )}
-                        style={{ width: `${Math.min(100, simulationResult.breachProbability)}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-[9px] text-slate-400 leading-tight">
-                      Based on 10,000 yearly runs, there is a {simulationResult.breachProbability.toFixed(2)}% chance you will exceed your downtime budget.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                      <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Median Year</span>
-                      <span className="text-[10px] font-mono font-bold dark:text-white">{formatDuration(simulationResult.medianDowntime)}</span>
-                    </div>
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                      <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Mean (Avg)</span>
-                      <span className="text-[10px] font-mono font-bold dark:text-white">{formatDuration(simulationResult.meanDowntime)}</span>
-                    </div>
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                      <span className="block text-[8px] font-black text-red-400 uppercase mb-1">P95 (Bad Year)</span>
-                      <span className="text-[10px] font-mono font-bold text-red-500">{formatDuration(simulationResult.p95Downtime)}</span>
-                    </div>
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                      <span className="block text-[8px] font-black text-red-600 uppercase mb-1">P99 (Calamity)</span>
-                      <span className="text-[10px] font-mono font-bold text-red-600">{formatDuration(simulationResult.p99Downtime)}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setShowHistogram(true)}
-                    className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase transition-all"
-                  >
-                    <BarChart3 className="w-3 h-3" />
-                    Show Distribution Histogram
-                  </button>
-                </div>
-              )}
             </section>
           </div>
         </div>
