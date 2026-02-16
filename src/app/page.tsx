@@ -1111,58 +1111,38 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const sections = {
     engine: [
       {
-        title: "Reliability Engine",
+        title: "Mathematical Foundations",
         icon: <Calculator className="w-4 h-4" />,
         content: [
-          { label: "K-out-of-N Redundancy", text: "Support for 'Partial Failures'. Define 'Min UP' requirements (e.g. 2-out-of-3) to model systems that stay healthy at reduced capacity." },
-          { label: "Failover Reliability", text: "Parallel groups include a 'Failover %' to model the success rate of the switch mechanism itself." },
-          { label: "MTTR Modeling", text: "Input Mean Time To Recovery for components to calculate weighted system recovery times and yearly outage durations." },
-                  { label: "Incident Frequency", text: "Estimated outages per year based on the statistical relationship between SLA and recovery time." },
-                  { label: "RTO & RPO Modeling", text: "Define Recovery Time Objective (restoration time) and Recovery Point Objective (data loss window) to verify DR compliance." }
-                ]
-              },
-          
-      {
-        title: "Productivity Tools",
-        icon: <Settings className="w-4 h-4 text-blue-500" />,
-        content: [
-          { label: "Cloud SLA Catalog", text: "Searchable database of official SLAs from AWS, Azure, and GCP for one-click architectural modeling." },
-          { label: "Impact Analysis", text: "Sensitivity engine that identifies 'System Bottlenecks' where improvements yield the highest gains." },
-          { label: "Calculation Steps", text: "A 'Show Detailed Work' modal providing full mathematical transparency for both SLA and MTTR." },
-          { label: "Shareable URLs", text: "Instantly encode your entire design into a Base64 URL for instant sharing without a backend." }
+          { label: "Series Availability", text: "Calculates the product of individual component availabilities. The system fails if any single component in the chain fails." },
+          { label: "Parallel Redundancy", text: "Calculates system availability using the redundancy formula, adjusted by the switch reliability (Failover %) of the primary path." },
+          { label: "K-out-of-N Modeling", text: "Uses dynamic programming to determine the exact success probability for nodes requiring a specific minimum capacity (Min UP) to function." },
+          { label: "MTTR Derivation", text: "Derives system-wide Mean Time To Recovery using frequency-weighted averages of component restoration times." },
+          { label: "RTO & RPO", text: "Aggregates Recovery Time Objectives (sum for series, min for parallel) and Recovery Point Objectives (max for series, min for parallel)." }
         ]
       }
     ],
     simulation: [
       {
-        title: "Chaos & Simulation",
-        icon: <Flame className="w-4 h-4 text-orange-500" />,
+        title: "Probabilistic Analysis",
+        icon: <BarChart3 className="w-4 h-4 text-indigo-500" />,
         content: [
-          { label: "Chaos Mode", text: "Interactive mode to 'Kill' specific components or groups to see real-time blast radius and system degradation." },
-          { label: "Blast Radius Heatmap", text: "Visual overlay that colors nodes based on their 'System Health Impact'—see which failures are catastrophic." },
-          { label: "Monte Carlo Engine", text: "Runs 10,000 yearly simulations automatically to show statistical variance, breach risk, and 'Bad Year' (P95) scenarios." },
-          { label: "Distribution Histogram", text: "Visual bell curve of all 10,000 simulation outcomes to understand the 'long-tail' risk of your architecture." }
+          { label: "Monte Carlo Engine", text: "Executes 10,000 yearly iterations using Poisson arrival rates for incidents and Exponential distributions for recovery durations." },
+          { label: "Sensitivity Analysis", text: "Identifies System Bottlenecks by calculating the delta between current SLA and a theoretical 100% available state for each node." },
+          { label: "Blast Radius Heatmap", text: "Calculates the health impact of individual failures. Nodes are color-coded based on the percentage of total system SLA lost if they fail." },
+          { label: "Error Budgeting", text: "Tracks consumed downtime against allowed duration for a specified period (Day/Month/Year) based on the target SLA." }
         ]
       }
     ],
     controls: [
       {
-        title: "Node Controls",
-        icon: <Component className="w-4 h-4 text-blue-500" />,
-        content: [
-          { label: "Critical/Optional", text: "Toggle whether a component is critical. Optional items are ignored in the total SLA calculation." },
-          { label: "Kill / Restore", text: "In Chaos Mode, injects failures. If multiple replicas exist, you can choose how many to fail." },
-          { label: "Lookup (Search)", text: "Opens the Cloud SLA Catalog to auto-fill metrics for standard AWS/GCP/Azure services." },
-          { label: "RTO / RPO", text: "Restore Time and Data Loss window inputs. These values aggregate to show system-wide disaster recovery metrics." }
-        ]
-      },
-      {
-        title: "System Controls",
+        title: "Interface Guide",
         icon: <Settings className="w-4 h-4 text-slate-500" />,
         content: [
-          { label: "List/Topology", text: "Switch between the hierarchical editor and the visual infrastructure diagram." },
-          { label: "Horizontal/Vertical", text: "In Topology view, reorient the diagram from a Left-to-Right flow to a Top-Down tree." },
-          { label: "Chaos (Skull)", text: "Activates the failure simulation environment and the Blast Radius heatmap." }
+          { label: "Chaos Mode", text: "Enables manual failure injection. For redundant components, users can specify the exact magnitude of replica failure." },
+          { label: "Cloud SLA Catalog", text: "Searchable database of published SLAs from AWS, Azure, GCP, and Cloudflare to pre-populate component metrics." },
+          { label: "Technical Annotations", text: "Support for multi-line technical notes and assumptions, persistent in both List and Topology views." },
+          { label: "State Persistence", text: "Configurations are handled via Base64-encoded URL hashes for zero-backend sharing and local JSON export/import." }
         ]
       }
     ]
@@ -1179,7 +1159,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">Slayer Documentation</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold tracking-tight uppercase opacity-70">Architecture reliability guide</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold tracking-tight uppercase opacity-70">Reliability Engineering Reference</p>
               </div>
             </div>
             <button 
@@ -1198,7 +1178,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 activeTab === 'engine' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               )}
             >
-              Reliability Engine
+              Reliability Math
             </button>
             <button
               onClick={() => setActiveTab('simulation')}
@@ -1207,7 +1187,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 activeTab === 'simulation' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               )}
             >
-              Chaos & Simulations
+              Risk Analysis
             </button>
             <button
               onClick={() => setActiveTab('controls')}
@@ -1216,19 +1196,19 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 activeTab === 'controls' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               )}
             >
-              Interface & Controls
+              Operational Controls
             </button>
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-8 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-1 gap-8 scrollbar-hide">
           {sections[activeTab].map((section, idx) => (
             <div key={idx} className="space-y-6">
               <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-100 dark:border-slate-800">
                 <div className="text-blue-600 dark:text-blue-400">{section.icon}</div>
                 <h3 className="font-black uppercase tracking-widest text-xs text-slate-900 dark:text-white">{section.title}</h3>
               </div>
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 {section.content.map((item, i) => (
                   <div key={i} className="group">
                     <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1 group-hover:translate-x-1 transition-transform inline-block">
