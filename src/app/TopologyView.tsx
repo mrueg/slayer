@@ -103,9 +103,9 @@ const TopologyNode: React.FC<{
   // Calculate heatmap color
   const getHeatColor = (score: number) => {
     if (!chaosMode || score <= 0) return "";
-    if (score > 0.8) return "bg-red-500/20 border-red-500 dark:border-red-500 shadow-red-500/20";
-    if (score > 0.4) return "bg-orange-500/20 border-orange-500 dark:border-orange-500 shadow-orange-500/20";
-    if (score > 0.1) return "bg-yellow-500/20 border-yellow-500 dark:border-yellow-500 shadow-yellow-500/20";
+    if (score > 0.8) return "bg-red-500/30 border-red-500 dark:border-red-500 shadow-red-500/20";
+    if (score > 0.4) return "bg-orange-500/30 border-orange-500 dark:border-orange-500 shadow-orange-500/20";
+    if (score > 0.1) return "bg-yellow-400/40 border-yellow-500 dark:border-yellow-500 shadow-yellow-500/20";
     return "bg-slate-500/10 border-slate-400 dark:border-slate-600";
   };
 
@@ -129,14 +129,14 @@ const TopologyNode: React.FC<{
         )}
 
         <div className={cn(
-          "relative p-4 rounded-xl border-2 transition-all duration-500 min-w-[220px] max-w-[220px] z-10",
+          "relative p-4 rounded-xl border-2 transition-all duration-500 min-w-[220px] max-w-[220px] z-10 shadow-sm",
           isGroup 
-            ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg group-hover:border-blue-400 dark:group-hover:border-blue-500" 
-            : "bg-slate-900 dark:bg-black border-slate-800 dark:border-slate-800 shadow-xl group-hover:border-slate-600 dark:group-hover:border-slate-700",
+            ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:border-blue-400 dark:group-hover:border-blue-500" 
+            : "bg-slate-900 dark:bg-black border-slate-800 dark:border-slate-800 group-hover:border-slate-600 dark:group-hover:border-slate-700",
           isBottleneck && !isDown && !isDegraded && "ring-2 ring-red-500 dark:ring-red-600 border-red-500 dark:border-red-600",
           isOptional && !isDown && !isDegraded && "opacity-50 grayscale-[0.5] border-dashed",
-          isDown && "ring-4 ring-red-600 border-red-600 bg-red-50 dark:bg-red-950/30 shadow-2xl animate-in shake-1 duration-500",
-          isDegraded && "ring-4 ring-orange-500 border-orange-500 bg-orange-50 dark:bg-orange-950/20 shadow-xl animate-in fade-in duration-500",
+          isDown && "ring-4 ring-red-600 border-red-600 bg-red-50 dark:bg-red-950/50 shadow-2xl animate-in shake-1 duration-500",
+          isDegraded && "ring-4 ring-orange-500 border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-xl animate-in fade-in duration-500",
           !isDown && !isDegraded && getHeatColor(impactScore)
         )}>
           {isBottleneck && !isDown && !isDegraded && (
@@ -159,8 +159,8 @@ const TopologyNode: React.FC<{
           )}
           {chaosMode && !isDown && !isDegraded && impactScore > 0 && (
             <div className={cn(
-              "absolute -top-2 -left-2 text-white px-2 py-0.5 rounded text-[8px] font-black shadow-md z-20",
-              impactScore > 0.8 ? "bg-red-600" : (impactScore > 0.4 ? "bg-orange-600" : "bg-yellow-600")
+              "absolute -top-2 -left-2 px-2 py-0.5 rounded text-[8px] font-black shadow-md z-20 transition-colors",
+              impactScore > 0.8 ? "bg-red-600 text-white" : (impactScore > 0.4 ? "bg-orange-600 text-white" : "bg-yellow-400 text-yellow-950")
             )}>
               {(impactScore * 100).toFixed(1)}% IMPACT
             </div>
@@ -255,7 +255,10 @@ const TopologyNode: React.FC<{
 
           {item.notes && (
             <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-[9px] leading-relaxed text-slate-500 dark:text-slate-400 font-medium italic line-clamp-2">
+              <p className={cn(
+                "text-[9px] leading-relaxed font-medium italic line-clamp-2 transition-colors duration-500",
+                isDown ? "text-red-800/60 dark:text-red-200/40" : (isDegraded ? "text-orange-800/60 dark:text-orange-200/40" : "text-slate-500 dark:text-slate-400")
+              )}>
                 {item.notes}
               </p>
             </div>
