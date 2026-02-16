@@ -130,155 +130,185 @@ const TopologyNode: React.FC<{
           )} />
         )}
 
-        <div className={cn(
-          "relative p-4 rounded-xl border-2 transition-all duration-500 min-w-[220px] max-w-[220px] z-10 shadow-sm",
-          isGroup 
-            ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:border-blue-400 dark:group-hover:border-blue-500" 
-            : "bg-slate-900 dark:bg-black border-slate-800 dark:border-slate-800 group-hover:border-slate-600 dark:group-hover:border-slate-700",
-          isBottleneck && !isDown && !isDegraded && "ring-2 ring-red-500 dark:ring-red-600 border-red-500 dark:border-red-600",
-          isOptional && !isDown && !isDegraded && "opacity-50 grayscale-[0.5] border-dashed",
-          isDown && "ring-4 ring-red-600 border-red-600 bg-red-50 dark:bg-red-950/50 shadow-2xl animate-in shake-1 duration-500",
-          isDegraded && "ring-4 ring-orange-500 border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-xl animate-in fade-in duration-500",
-          hasHeat && getHeatColor(impactScore)
-        )}>
-          {isBottleneck && !isDown && !isDegraded && (
-            <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
-              <AlertTriangle className="w-2 h-2" />
-              BOTTLENECK
-            </div>
-          )}
-          {isDown && (
-            <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md animate-bounce">
-              <Skull className="w-2 h-2" />
-              DOWN
-            </div>
-          )}
-          {isDegraded && (
-            <div className="absolute -top-2 -right-2 bg-orange-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
-              <AlertTriangle className="w-2 h-2" />
-              DEGRADED ({failed}/{replicas})
-            </div>
-          )}
-          {chaosMode && !isDown && !isDegraded && impactScore > 0 && (
-            <div className={cn(
-              "absolute -top-2 -left-2 px-2 py-0.5 rounded text-[8px] font-black shadow-md z-20 transition-colors",
-              impactScore > 0.8 ? "bg-red-600 text-white" : (impactScore > 0.4 ? "bg-orange-600 text-white" : "bg-yellow-400 text-yellow-950")
-            )}>
-              {(impactScore * 100).toFixed(1)}% IMPACT
-            </div>
-          )}
-          {isOptional && !isDown && !isDegraded && !chaosMode && (
-            <div className="absolute -top-2 -left-2 bg-slate-500 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
-              <ShieldCheck className="w-2 h-2" />
-              OPTIONAL
-            </div>
-          )}
-          <div className="flex items-center gap-3 mb-3">
-            <div className={cn(
-              "p-1.5 rounded-lg transition-colors duration-500",
-              isDown ? "bg-red-100 dark:bg-red-900/40" : (isDegraded ? "bg-orange-100 dark:bg-orange-900/30" : (isGroup ? "bg-blue-50 dark:bg-blue-900/20" : "bg-slate-800 dark:bg-slate-900"))
-            )}>
-              {isDown ? <Skull className="w-4 h-4 text-red-600" /> : (isDegraded ? <AlertTriangle className="w-4 h-4 text-orange-600" /> : getIcon(item))}
-            </div>
-            <span className={cn(
-              "font-bold text-xs truncate transition-colors duration-500",
-              isDown ? "text-red-700 dark:text-red-400" : (
-                isDegraded ? "text-orange-700 dark:text-orange-400" : (
-                  hasHeat ? "text-slate-900 dark:text-slate-100" : (
-                    isGroup ? "text-slate-700 dark:text-slate-200" : "text-slate-200 dark:text-slate-300"
-                  )
-                )
-              ),
-              isOptional && "line-through decoration-slate-400"
-            )}>
-              {item.name}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-end">
-            <div>
+        <div className="relative">
+          {/* Replica Stacking Effect */}
+          {replicas > 1 && (
+            <>
               <div className={cn(
-                "text-[9px] font-black uppercase tracking-wider mb-1 transition-colors duration-500",
-                hasHeat ? "text-slate-600 dark:text-slate-400" : (isGroup ? "text-slate-400 dark:text-slate-500" : "text-slate-500 dark:text-slate-600")
-              )}>
-                {isGroup ? "Configuration" : "Redundancy"}
+                "absolute top-1 left-1 w-full h-full rounded-xl border-2 z-0 opacity-40 transition-all duration-500",
+                isGroup ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" : "bg-slate-900 dark:bg-black border-slate-800"
+              )} />
+              <div className={cn(
+                "absolute top-2 left-2 w-full h-full rounded-xl border-2 z-0 opacity-20 transition-all duration-500",
+                isGroup ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700" : "bg-slate-900 dark:bg-black border-slate-800"
+              )} />
+            </>
+          )}
+
+          <div className={cn(
+            "relative p-4 rounded-xl border-2 transition-all duration-500 min-w-[220px] max-w-[220px] z-10 shadow-sm",
+            isGroup 
+              ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:border-blue-400 dark:group-hover:border-blue-500" 
+              : "bg-slate-900 dark:bg-black border-slate-800 dark:border-slate-800 group-hover:border-slate-600 dark:group-hover:border-slate-700",
+            isBottleneck && !isDown && !isDegraded && "ring-2 ring-red-500 dark:ring-red-600 border-red-500 dark:border-red-600",
+            isOptional && !isDown && !isDegraded && "opacity-50 grayscale-[0.5] border-dashed",
+            isDown && "ring-4 ring-red-600 border-red-600 bg-red-50 dark:bg-red-950/50 shadow-2xl animate-in shake-1 duration-500",
+            isDegraded && "ring-4 ring-orange-500 border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-xl animate-in fade-in duration-500",
+            hasHeat && getHeatColor(impactScore)
+          )}>
+            {isBottleneck && !isDown && !isDegraded && (
+              <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
+                <AlertTriangle className="w-2 h-2" />
+                BOTTLENECK
               </div>
-              <div className="flex gap-1">
+            )}
+            {isDown && (
+              <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md animate-bounce">
+                <Skull className="w-2 h-2" />
+                DOWN
+              </div>
+            )}
+            {isDegraded && (
+              <div className="absolute -top-2 -right-2 bg-orange-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
+                <AlertTriangle className="w-2 h-2" />
+                DEGRADED ({failed}/{replicas})
+              </div>
+            )}
+            {chaosMode && !isDown && !isDegraded && impactScore > 0 && (
+              <div className={cn(
+                "absolute -top-2 -left-2 px-2 py-0.5 rounded text-[8px] font-black shadow-md z-20 transition-colors",
+                impactScore > 0.8 ? "bg-red-600 text-white" : (impactScore > 0.4 ? "bg-orange-600 text-white" : "bg-yellow-400 text-yellow-950")
+              )}>
+                {(impactScore * 100).toFixed(1)}% IMPACT
+              </div>
+            )}
+            {isOptional && !isDown && !isDegraded && !chaosMode && (
+              <div className="absolute -top-2 -left-2 bg-slate-500 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
+                <ShieldCheck className="w-2 h-2" />
+                OPTIONAL
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-3">
+              <div className={cn(
+                "p-1.5 rounded-lg transition-colors duration-500",
+                isDown ? "bg-red-100 dark:bg-red-900/40" : (isDegraded ? "bg-orange-100 dark:bg-orange-900/30" : (isGroup ? "bg-blue-50 dark:bg-blue-900/20" : "bg-slate-800 dark:bg-slate-900"))
+              )}>
+                {isDown ? <Skull className="w-4 h-4 text-red-600" /> : (isDegraded ? <AlertTriangle className="w-4 h-4 text-orange-600" /> : getIcon(item))}
+              </div>
+              <span className={cn(
+                "font-bold text-xs truncate transition-colors duration-500",
+                isDown ? "text-red-700 dark:text-red-400" : (
+                  isDegraded ? "text-orange-700 dark:text-orange-400" : (
+                    hasHeat ? "text-slate-900 dark:text-slate-100" : (
+                      isGroup ? "text-slate-700 dark:text-slate-200" : "text-slate-200 dark:text-slate-300"
+                    )
+                  )
+                ),
+                isOptional && "line-through decoration-slate-400"
+              )}>
+                {item.name}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-end">
+              <div>
+                <div className={cn(
+                  "text-[9px] font-black uppercase tracking-wider mb-1 transition-colors duration-500",
+                  hasHeat ? "text-slate-600 dark:text-slate-400" : (isGroup ? "text-slate-400 dark:text-slate-500" : "text-slate-500 dark:text-slate-600")
+                )}>
+                  {isGroup ? (item.replicas && item.replicas > 1 ? "Config & Redundancy" : "Configuration") : "Redundancy"}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {isGroup && (
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded transition-colors duration-500",
+                      isDown ? "bg-red-200 dark:bg-red-900/60 text-red-800 dark:text-red-200" : (
+                        isDegraded ? "bg-orange-200 dark:bg-orange-900/60 text-orange-800 dark:text-orange-200" : (
+                          hasHeat 
+                            ? "bg-white/50 dark:bg-black/20 text-slate-700 dark:text-slate-300 border border-slate-300/50 dark:border-slate-700/50"
+                            : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+                        )
+                      )
+                    )}>
+                      {item.config?.toUpperCase()}
+                    </span>
+                  )}
+                  {(item.replicas && item.replicas > 1 || !isGroup) && (
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded transition-colors duration-500",
+                      isDown ? "bg-red-200 dark:bg-red-900/60 text-red-800 dark:text-red-200" : (
+                        isDegraded ? "bg-orange-200 dark:bg-orange-900/60 text-orange-800 dark:text-orange-200" : (
+                          hasHeat 
+                            ? "bg-white/50 dark:bg-black/20 text-slate-700 dark:text-slate-300 border border-slate-300/50 dark:border-slate-700/50"
+                            : "bg-slate-800 dark:bg-slate-900 text-slate-400 dark:text-slate-500 border border-slate-700 dark:border-slate-800"
+                        )
+                      )
+                    )}>
+                      {item.replicas || 1} REPLICAS
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={cn(
+                  "text-[9px] font-black uppercase tracking-wider mb-1 transition-colors duration-500",
+                  hasHeat ? "text-slate-600 dark:text-slate-400" : (isGroup ? "text-slate-400 dark:text-slate-500" : "text-slate-500 dark:text-slate-600")
+                )}>
+                  SLA
+                </div>
                 <span className={cn(
-                  "text-[10px] font-bold px-2 py-0.5 rounded transition-colors duration-500",
-                  isDown ? "bg-red-200 dark:bg-red-900/60 text-red-800 dark:text-red-200" : (
-                    isDegraded ? "bg-orange-200 dark:bg-orange-900/60 text-orange-800 dark:text-orange-200" : (
-                      hasHeat 
-                        ? "bg-white/50 dark:bg-black/20 text-slate-700 dark:text-slate-300 border border-slate-300/50 dark:border-slate-700/50"
-                        : (isGroup 
-                            ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300" 
-                            : "bg-slate-800 dark:bg-slate-900 text-slate-400 dark:text-slate-500 border border-slate-700 dark:border-slate-800")
+                  "font-mono text-sm font-black transition-colors duration-500",
+                  isDown ? "text-red-600 dark:text-red-500" : (
+                    isDegraded ? "text-orange-600 dark:text-orange-500" : (
+                      hasHeat ? "text-slate-900 dark:text-slate-100" : (
+                        isOptional ? "text-slate-400 dark:text-slate-600" : (isGroup ? "text-blue-600 dark:text-blue-400" : "text-blue-400 dark:text-blue-500")
+                      )
                     )
                   )
                 )}>
-                  {isGroup ? item.config?.toUpperCase() : `${item.replicas || 1} REPLICAS`}
+                  {formatSLAPercentage(sla)}%
                 </span>
               </div>
             </div>
-            <div className="text-right">
-              <div className={cn(
-                "text-[9px] font-black uppercase tracking-wider mb-1 transition-colors duration-500",
-                hasHeat ? "text-slate-600 dark:text-slate-400" : (isGroup ? "text-slate-400 dark:text-slate-500" : "text-slate-500 dark:text-slate-600")
-              )}>
-                SLA
-              </div>
-              <span className={cn(
-                "font-mono text-sm font-black transition-colors duration-500",
-                isDown ? "text-red-600 dark:text-red-500" : (
-                  isDegraded ? "text-orange-600 dark:text-orange-500" : (
-                    hasHeat ? "text-slate-900 dark:text-slate-100" : (
-                      isOptional ? "text-slate-400 dark:text-slate-600" : (isGroup ? "text-blue-600 dark:text-blue-400" : "text-blue-400 dark:text-blue-500")
+
+            {chaosMode && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isDown || isDegraded) {
+                    onUpdate(item.id, { failedReplicas: 0 });
+                  } else if (replicas > 1) {
+                    setShowKillModal(true);
+                  } else {
+                    onUpdate(item.id, { failedReplicas: 1 });
+                  }
+                }}
+                className={cn(
+                  "absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[8px] font-black uppercase transition-all shadow-lg z-30",
+                  (isDown || isDegraded)
+                    ? "bg-green-600 text-white hover:bg-green-500" 
+                    : "bg-red-600 text-white hover:bg-red-500 animate-pulse"
+                )}
+              >
+                {(isDown || isDegraded) ? "Restore" : "Kill"}
+              </button>
+            )}
+
+            {item.notes && (
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                <p className={cn(
+                  "text-[9px] leading-relaxed font-medium italic line-clamp-2 transition-colors duration-500",
+                  isDown ? "text-red-800/60 dark:text-red-200/40" : (
+                    isDegraded ? "text-orange-800/60 dark:text-orange-200/40" : (
+                      hasHeat ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"
                     )
                   )
-                )
-              )}>
-                {formatSLAPercentage(sla)}%
-              </span>
-            </div>
+                )}>
+                  {item.notes}
+                </p>
+              </div>
+            )}
           </div>
-
-          {chaosMode && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isDown || isDegraded) {
-                  onUpdate(item.id, { failedReplicas: 0 });
-                } else if (replicas > 1) {
-                  setShowKillModal(true);
-                } else {
-                  onUpdate(item.id, { failedReplicas: 1 });
-                }
-              }}
-              className={cn(
-                "absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[8px] font-black uppercase transition-all shadow-lg z-30",
-                (isDown || isDegraded)
-                  ? "bg-green-600 text-white hover:bg-green-500" 
-                  : "bg-red-600 text-white hover:bg-red-500 animate-pulse"
-              )}
-            >
-              {(isDown || isDegraded) ? "Restore" : "Kill"}
-            </button>
-          )}
-
-          {item.notes && (
-            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/50">
-              <p className={cn(
-                "text-[9px] leading-relaxed font-medium italic line-clamp-2 transition-colors duration-500",
-                isDown ? "text-red-800/60 dark:text-red-200/40" : (
-                  isDegraded ? "text-orange-800/60 dark:text-orange-200/40" : (
-                    hasHeat ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"
-                  )
-                )
-              )}>
-                {item.notes}
-              </p>
-            </div>
-          )}
         </div>
 
         {showKillModal && (
