@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "slayer | composite SLA calculator",
-  description: "Composite SLA Calculator - Raining Blood (and Uptime)",
+  title: "slayer | reliability modeling",
+  description: "Advanced Reliability Modeling - Raining Blood (and Uptime)",
 };
 
 export default function RootLayout({

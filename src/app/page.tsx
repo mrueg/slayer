@@ -1167,7 +1167,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">Slayer Documentation</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold tracking-tight uppercase opacity-70">Reliability Engineering Reference</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold tracking-tight uppercase opacity-70">Reliability Modeling Reference</p>
               </div>
             </div>
             <button 
@@ -1186,7 +1186,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 activeTab === 'engine' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               )}
             >
-              Reliability Math
+              Reliability Modeling
             </button>
             <button
               onClick={() => setActiveTab('simulation')}
@@ -1394,7 +1394,7 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                 activeTab === 'sla' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               )}
             >
-              SLA Breakdown
+              Reliability Modeling
             </button>
             <button
               onClick={() => setActiveTab('mttr')}
@@ -1496,7 +1496,7 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
   );
 };
 
-export default function SLACalculator() {
+export default function ReliabilityModeling() {
   const defaultSystem: SLAItem = {
     id: 'root',
     name: 'Cloud Infrastructure',
@@ -1768,7 +1768,7 @@ export default function SLACalculator() {
               <Calculator className="w-10 h-10 text-blue-600" />
               slayer
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs tracking-tight">Reliability Engineering & Probabilistic Risk Modeling</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-xs tracking-tight">Reliability Modeling & Probabilistic Risk Analysis</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -2034,7 +2034,7 @@ export default function SLACalculator() {
             <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[480px] space-y-8">
               <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
                 <Activity className="w-4 h-4 text-blue-500" />
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Operational Analysis</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Reliability Analysis</h3>
               </div>
 
               {/* Monte Carlo Simulation (Promoted to Top) */}
@@ -2178,11 +2178,11 @@ export default function SLACalculator() {
 
               <div className="h-[1px] bg-slate-100 dark:bg-slate-700" />
 
-              {/* Error Budget Calculator */}
+              {/* Error Budget Modeling */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Activity className="w-4 h-4 text-blue-500" />
-                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget Modeling</h3>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
