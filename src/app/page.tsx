@@ -23,7 +23,9 @@ import {
   runMonteCarlo,
   MonteCarloResult,
   getHistogramData,
-  getBlastRadiusMap
+  getBlastRadiusMap,
+  calculateDRMetrics,
+  DRResult
 } from '@/lib/sla-calculator';
 import TopologyView from './TopologyView';
 import KillModal from './KillModal';
@@ -699,6 +701,30 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           </div>
 
           <div className="w-full lg:w-20">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RTO (min)</label>
+            <input
+              type="number"
+              min="0"
+              value={item.rto || 0}
+              onChange={(e) => onUpdate(item.id, { rto: parseInt(e.target.value) || 0 })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+              title="Recovery Time Objective (Target time to restore service)"
+            />
+          </div>
+
+          <div className="w-full lg:w-20">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RPO (min)</label>
+            <input
+              type="number"
+              min="0"
+              value={item.rpo || 0}
+              onChange={(e) => onUpdate(item.id, { rpo: parseInt(e.target.value) || 0 })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+              title="Recovery Point Objective (Acceptable data loss in minutes)"
+            />
+          </div>
+
+          <div className="w-full lg:w-20">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Replicas</label>
             <input
               type="number"
@@ -1091,9 +1117,11 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           { label: "K-out-of-N Redundancy", text: "Support for 'Partial Failures'. Define 'Min UP' requirements (e.g. 2-out-of-3) to model systems that stay healthy at reduced capacity." },
           { label: "Failover Reliability", text: "Parallel groups include a 'Failover %' to model the success rate of the switch mechanism itself." },
           { label: "MTTR Modeling", text: "Input Mean Time To Recovery for components to calculate weighted system recovery times and yearly outage durations." },
-          { label: "Incident Frequency", text: "Estimated outages per year based on the statistical relationship between SLA and recovery time." }
-        ]
-      },
+                  { label: "Incident Frequency", text: "Estimated outages per year based on the statistical relationship between SLA and recovery time." },
+                  { label: "RTO & RPO Modeling", text: "Define Recovery Time Objective (restoration time) and Recovery Point Objective (data loss window) to verify DR compliance." }
+                ]
+              },
+          
       {
         title: "Productivity Tools",
         icon: <Settings className="w-4 h-4 text-blue-500" />,
@@ -1124,7 +1152,8 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         content: [
           { label: "Critical/Optional", text: "Toggle whether a component is critical. Optional items are ignored in the total SLA calculation." },
           { label: "Kill / Restore", text: "In Chaos Mode, injects failures. If multiple replicas exist, you can choose how many to fail." },
-          { label: "Lookup (Search)", text: "Opens the Cloud SLA Catalog to auto-fill metrics for standard AWS/GCP/Azure services." }
+          { label: "Lookup (Search)", text: "Opens the Cloud SLA Catalog to auto-fill metrics for standard AWS/GCP/Azure services." },
+          { label: "RTO / RPO", text: "Restore Time and Data Loss window inputs. These values aggregate to show system-wide disaster recovery metrics." }
         ]
       },
       {
@@ -1526,6 +1555,8 @@ export default function SLACalculator() {
   const [showShareTooltip, setShowShareTooltip] = useState(false);
   const [consumedDowntime, setConsumedDowntime] = useState(0); // in seconds
   const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
+  const [targetRto, setTargetRto] = useState(240); // 4 hours
+  const [targetRpo, setTargetRpo] = useState(60); // 1 hour
   const [simulationResult, setSimulationResult] = useState<MonteCarloResult | null>(null);
   const [overrideTargetSla, setOverrideTargetSla] = useState<number | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -1658,7 +1689,8 @@ export default function SLACalculator() {
     reliability, 
     calculationSteps, 
     errorBudget,
-    blastRadiusMap
+    blastRadiusMap,
+    drMetrics
   } = useMemo(() => {
     const sla = calculateSLA(root);
     return {
@@ -1668,7 +1700,8 @@ export default function SLACalculator() {
       reliability: calculateReliability(root),
       calculationSteps: getCalculationSteps(root),
       errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod),
-      blastRadiusMap: getBlastRadiusMap(root)
+      blastRadiusMap: getBlastRadiusMap(root),
+      drMetrics: calculateDRMetrics(root)
     };
   }, [root, consumedDowntime, budgetPeriod]);
 
@@ -1975,60 +2008,70 @@ export default function SLACalculator() {
 
             <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[480px]">
               <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-4 h-4 text-blue-500" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget Calculator</h3>
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Disaster Recovery (DR) Goals</h3>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (sec)</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RTO (min)</label>
                     <input
                       type="number"
                       min="0"
-                      value={consumedDowntime}
-                      onChange={(e) => setConsumedDowntime(parseFloat(e.target.value) || 0)}
+                      value={targetRto}
+                      onChange={(e) => setTargetRto(parseInt(e.target.value) || 0)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Period</label>
-                    <select
-                      value={budgetPeriod}
-                      onChange={(e) => setBudgetPeriod(e.target.value as DowntimePeriod)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[34px] dark:text-slate-200"
-                    >
-                      <option value="day">Day</option>
-                      <option value="month">Month</option>
-                      <option value="year">Year</option>
-                    </select>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RPO (min)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={targetRpo}
+                      onChange={(e) => setTargetRpo(parseInt(e.target.value) || 0)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                    />
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Remaining Budget</span>
-                    <span className={cn(
-                      "font-mono font-bold text-sm",
-                      errorBudget.isBreached ? "text-red-500" : "text-emerald-500"
+                <div className="space-y-4">
+                  <div className="p-3 rounded-xl border flex items-center justify-between transition-all" style={{ 
+                    backgroundColor: drMetrics.rto <= targetRto ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                    borderColor: drMetrics.rto <= targetRto ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                  }}>
+                    <div>
+                      <span className="block text-[9px] font-black uppercase text-slate-400">Actual System RTO</span>
+                      <span className={cn("text-sm font-mono font-black", drMetrics.rto <= targetRto ? "text-emerald-600" : "text-red-600")}>
+                        {formatDuration(drMetrics.rto)}
+                      </span>
+                    </div>
+                    <div className={cn(
+                      "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
+                      drMetrics.rto <= targetRto ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                     )}>
-                      {errorBudget.isBreached ? "BREACHED" : formatDuration(errorBudget.remainingSeconds / 60)}
-                    </span>
+                      {drMetrics.rto <= targetRto ? "GOAL MET" : "EXCEEDED"}
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div 
-                      className={cn(
-                        "h-full transition-all duration-500",
-                        errorBudget.isBreached ? "bg-red-500" : "bg-emerald-500"
-                      )}
-                      style={{ 
-                        width: `${Math.min(100, Math.max(0, (errorBudget.remainingSeconds / errorBudget.totalBudgetSeconds) * 100))}%` 
-                      }}
-                    />
+
+                  <div className="p-3 rounded-xl border flex items-center justify-between transition-all" style={{ 
+                    backgroundColor: drMetrics.rpo <= targetRpo ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                    borderColor: drMetrics.rpo <= targetRpo ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                  }}>
+                    <div>
+                      <span className="block text-[9px] font-black uppercase text-slate-400">Actual System RPO</span>
+                      <span className={cn("text-sm font-mono font-black", drMetrics.rpo <= targetRpo ? "text-emerald-600" : "text-red-600")}>
+                        {formatDuration(drMetrics.rpo)}
+                      </span>
+                    </div>
+                    <div className={cn(
+                      "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
+                      drMetrics.rpo <= targetRpo ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                    )}>
+                      {drMetrics.rpo <= targetRpo ? "GOAL MET" : "EXCEEDED"}
+                    </div>
                   </div>
-                  <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 italic">
-                    Total {budgetPeriod}ly budget: {formatDuration(errorBudget.totalBudgetSeconds / 60)}
-                  </p>
                 </div>
               </div>
             </section>

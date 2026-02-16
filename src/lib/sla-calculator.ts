@@ -21,6 +21,13 @@ export interface SLAItem {
   inputMode?: InputMode;
   downtimeValue?: number; // in seconds
   downtimePeriod?: DowntimePeriod;
+  rto?: number; // Recovery Time Objective in minutes
+  rpo?: number; // Recovery Point Objective in minutes
+}
+
+export interface DRResult {
+  rto: number;
+  rpo: number;
 }
 
 export interface CalculationResult {
@@ -111,6 +118,37 @@ export interface ReliabilityResult {
   frequency: number; // incidents per year
   mttr: number; // minutes
 }
+
+export const calculateDRMetrics = (item: SLAItem): DRResult => {
+  if (item.isOptional) return { rto: 0, rpo: 0 };
+
+  if (item.type === 'component') {
+    return {
+      rto: item.rto || 0,
+      rpo: item.rpo || 0
+    };
+  }
+
+  const children = item.children || [];
+  if (children.length === 0) return { rto: 0, rpo: 0 };
+
+  const childMetrics = children.map(child => calculateDRMetrics(child));
+
+  if (item.config === 'series') {
+    return {
+      // Series: RTO is the sum (sequential recovery)
+      rto: childMetrics.reduce((acc, m) => acc + m.rto, 0),
+      // Series: RPO is the max (data is as old as the weakest backup link)
+      rpo: Math.max(...childMetrics.map(m => m.rpo))
+    };
+  } else {
+    // Parallel: You only need ONE to recover
+    return {
+      rto: Math.min(...childMetrics.map(m => m.rto)),
+      rpo: Math.min(...childMetrics.map(m => m.rpo))
+    };
+  }
+};
 
 const YEAR_MINUTES = 365.25 * 24 * 60;
 
