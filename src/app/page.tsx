@@ -1279,10 +1279,20 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
               <span className={cn("text-xl font-black font-mono", result.breachProbability > 5 ? "text-red-500" : "text-emerald-500")}>
                 {result.breachProbability.toFixed(2)}%
               </span>
+              {result.breachProbabilityCI && (
+                <span className="block text-[10px] text-slate-400 font-mono mt-1">
+                  95% CI: [{result.breachProbabilityCI[0].toFixed(2)}%, {result.breachProbabilityCI[1].toFixed(2)}%]
+                </span>
+              )}
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Median Year</span>
-              <span className="text-xl font-black font-mono dark:text-white">{formatDuration(result.medianDowntime)}</span>
+              <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Mean Year</span>
+              <span className="text-xl font-black font-mono dark:text-white">{formatDuration(result.meanDowntime)}</span>
+              {result.meanDowntimeCI && (
+                <span className="block text-[10px] text-slate-400 font-mono mt-1">
+                  95% CI: [{formatDuration(result.meanDowntimeCI[0])}, {formatDuration(result.meanDowntimeCI[1])}]
+                </span>
+              )}
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
               <span className="block text-[10px] font-black text-red-400 uppercase mb-1">95th Percentile</span>

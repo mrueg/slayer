@@ -616,13 +616,34 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
   const p95 = downtimes[Math.floor(iterations * 0.95)];
   const p99 = downtimes[Math.floor(iterations * 0.99)];
 
+  // Calculate Confidence Intervals (95%)
+  // For Breach Probability (Binomial Distribution)
+  const p = breaches / iterations;
+  const z = 1.96; // 95% confidence
+  const breachError = z * Math.sqrt((p * (1 - p)) / iterations);
+  const breachProbabilityCI: [number, number] = [
+    Math.max(0, (p - breachError) * 100),
+    Math.min(100, (p + breachError) * 100)
+  ];
+
+  // For Mean Downtime
+  const variance = downtimes.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (iterations - 1);
+  const stdDev = Math.sqrt(variance);
+  const meanError = z * (stdDev / Math.sqrt(iterations));
+  const meanDowntimeCI: [number, number] = [
+    Math.max(0, mean - meanError),
+    mean + meanError
+  ];
+
   return {
     iterations,
     meanDowntime: mean,
     medianDowntime: median,
     p95Downtime: p95,
     p99Downtime: p99,
-    breachProbability: (breaches / iterations) * 100,
+    breachProbability: p * 100,
+    breachProbabilityCI,
+    meanDowntimeCI,
     distribution: downtimes
   };
 };
@@ -634,6 +655,8 @@ export interface MonteCarloResult {
   p95Downtime: number;
   p99Downtime: number;
   breachProbability: number;
+  breachProbabilityCI?: [number, number];
+  meanDowntimeCI?: [number, number];
   distribution: number[];
 }
 
