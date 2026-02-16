@@ -2,7 +2,7 @@
 
 > South of Heaven, North of Five Nines.
 
-**slayer** is a professional reliability modeling and probabilistic risk analysis suite designed for infrastructure architects and SREs. It moves beyond simple calculators to model complex, multi-layered system availability, disaster recovery profiles, and yearly risk distributions.
+**slayer** is a reliability modeling and probabilistic risk analysis suite designed for infrastructure architects and SREs. It moves beyond simple calculators to model complex, multi-layered system availability, disaster recovery profiles, and yearly risk distributions.
 
 **Live version:** [https://mrueg.github.io/slayer/](https://mrueg.github.io/slayer/)
 
