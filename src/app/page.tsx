@@ -2077,6 +2077,66 @@ export default function SLACalculator() {
             </section>
 
             <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[780px]">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="w-4 h-4 text-blue-500" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget Calculator</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (sec)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={consumedDowntime}
+                      onChange={(e) => setConsumedDowntime(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Period</label>
+                    <select
+                      value={budgetPeriod}
+                      onChange={(e) => setBudgetPeriod(e.target.value as DowntimePeriod)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[34px] dark:text-slate-200"
+                    >
+                      <option value="day">Day</option>
+                      <option value="month">Month</option>
+                      <option value="year">Year</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Remaining Budget</span>
+                    <span className={cn(
+                      "font-mono font-bold text-sm",
+                      errorBudget.isBreached ? "text-red-500" : "text-emerald-500"
+                    )}>
+                      {errorBudget.isBreached ? "BREACHED" : formatDuration(errorBudget.remainingSeconds / 60)}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full transition-all duration-500",
+                        errorBudget.isBreached ? "bg-red-500" : "bg-emerald-500"
+                      )}
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, (errorBudget.remainingSeconds / errorBudget.totalBudgetSeconds) * 100))}%` 
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 italic">
+                    Total {budgetPeriod}ly budget: {formatDuration(errorBudget.totalBudgetSeconds / 60)}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[1080px]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Dices className="w-4 h-4 text-indigo-500" />
