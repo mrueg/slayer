@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
   Plus, Trash2, Calculator, Layers, FolderPlus, Component, RefreshCcw, Eraser, Clock, Percent, Network, List, Moon, Sun, AlertTriangle, Download, Upload, Activity, ChevronDown, Library, Share2, ShieldCheck, ShieldAlert,
   Database, Globe, Zap, Shield, ZapOff, Server, HardDrive, Cpu, Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Columns, Rows, StickyNote, Search, Skull, Flame, Dices, BarChart3, HelpCircle
@@ -19,13 +19,11 @@ import {
   getCalculationSteps,
   CalculationStep,
   calculateReliability,
-  ReliabilityResult,
   runMonteCarlo,
   MonteCarloResult,
   getHistogramData,
   getBlastRadiusMap,
-  calculateDRMetrics,
-  DRResult
+  calculateDRMetrics
 } from '@/lib/sla-calculator';
 import TopologyView from './TopologyView';
 import KillModal from './KillModal';
@@ -1599,8 +1597,7 @@ export default function SLACalculator() {
       try {
         const decoded = JSON.parse(atob(hash));
         if (decoded && decoded.id) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setRoot(decoded);
+          setTimeout(() => setRoot(decoded), 0);
         }
       } catch {
         console.error('Failed to decode configuration from URL');
@@ -1691,17 +1688,6 @@ export default function SLACalculator() {
     e.target.value = '';
   };
 
-  const handleRunSimulation = () => {
-    setIsSimulating(true);
-    // Use setTimeout to allow the UI to show loading state
-    setTimeout(() => {
-      const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
-      const result = runMonteCarlo(reliability, target, 10000);
-      setSimulationResult(result);
-      setIsSimulating(false);
-    }, 50);
-  };
-
   const { 
     compositeSla, 
     downtime, 
@@ -1725,13 +1711,24 @@ export default function SLACalculator() {
     };
   }, [root, consumedDowntime, budgetPeriod]);
 
+  const handleRunSimulation = useCallback(() => {
+    setIsSimulating(true);
+    // Use setTimeout to allow the UI to show loading state
+    setTimeout(() => {
+      const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
+      const result = runMonteCarlo(reliability, target, 10000);
+      setSimulationResult(result);
+      setIsSimulating(false);
+    }, 50);
+  }, [reliability, overrideTargetSla, compositeSla]);
+
   // Run simulation automatically when data changes
   useEffect(() => {
     const timer = setTimeout(() => {
       handleRunSimulation();
     }, 500);
     return () => clearTimeout(timer);
-  }, [reliability, overrideTargetSla, compositeSla]);
+  }, [handleRunSimulation]);
 
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
     setSimulationResult(null); // Reset simulation when data changes
@@ -2263,6 +2260,14 @@ export default function SLACalculator() {
       {showHelp && (
         <HelpModal onClose={() => setShowHelp(false)} />
       )}
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImport}
+        className="hidden"
+        accept=".json"
+      />
     </div>
   );
 }

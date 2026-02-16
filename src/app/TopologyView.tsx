@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { SLAItem, calculateSLA, formatSLAPercentage } from '@/lib/sla-calculator';
 import { 
   Layers, Component, Zap, Shield, Database, Globe, MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Server, ZapOff, HardDrive, Cpu, Network,
-  Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Activity, Skull, RefreshCcw, Flame
+  Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Activity, Skull, Flame
 } from 'lucide-react';
 import KillModal from './KillModal';
 import { clsx, type ClassValue } from 'clsx';

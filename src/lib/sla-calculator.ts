@@ -196,7 +196,6 @@ export const calculateReliability = (item: SLAItem): ReliabilityResult => {
   } else {
     // Parallel
     const primary = childResults[0];
-    const others = childResults.slice(1);
     const switchReliability = (item.failoverSla ?? 100) / 100;
     const k = item.minChildrenRequired || 1;
 
