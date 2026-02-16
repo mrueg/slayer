@@ -1970,8 +1970,8 @@ export default function ReliabilityModeling() {
             )}
           </div>
 
-          <div className="w-full xl:w-96 space-y-6 shrink-0">
-            <section className="bg-slate-900 dark:bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-xl overflow-hidden sticky top-8 transition-colors">
+          <div className="w-full xl:w-96 space-y-6 shrink-0 xl:sticky xl:top-8">
+            <section className="bg-slate-900 dark:bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-xl overflow-hidden transition-colors">
               <div className="p-8 text-center bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900">
                 <p className="text-blue-100 text-sm font-semibold uppercase tracking-widest mb-2">Total System SLA</p>
                 <div className="text-5xl font-black mb-2 tracking-tighter">
@@ -2031,7 +2031,7 @@ export default function ReliabilityModeling() {
               </div>
             </section>
 
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm sticky top-[480px] space-y-8">
+            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-8">
               <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
                 <Activity className="w-4 h-4 text-blue-500" />
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Reliability Analysis</h3>
