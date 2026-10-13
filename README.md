@@ -33,7 +33,7 @@
 
 ## Technical Foundations
 
-**slayer** is built with **Next.js 15**, **Tailwind CSS 4**, and **Lucide React**. It utilizes several sophisticated mathematical models:
+**slayer** is built with **Next.js 16**, **Tailwind CSS 4**, and **Lucide React**. It utilizes several sophisticated mathematical models:
 *   **Probability**: Exact success probability via dynamic programming for non-identical component SLAs in K-of-N groups.
 *   **Stochastics**: Poisson arrival rate modeling for incident frequency.
 *   **Simulation**: 10,000-run Monte Carlo engine with debounced real-time updates.
@@ -48,6 +48,13 @@ npm install
 ### Development
 ```bash
 npm run dev
+```
+
+### Checks
+```bash
+npm run lint
+npm test
+npm run build
 ```
 
 ### Zero-Backend Persistence
