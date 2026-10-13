@@ -312,6 +312,37 @@ export const findBottleneck = (root: SLAItem): BottleneckResult => {
   return { ids: results.map(r => r.id), impact: maxImpact };
 };
 
+export interface SensitivityEntry {
+  id: string;
+  name: string;
+  type: SLAItem['type'];
+  slaGain: number; // percentage points gained if this item were 100% available
+  downtimeSavedPerYear: number; // minutes
+}
+
+/**
+ * Ranks every item by how much the system SLA would improve if that item
+ * never failed, i.e. where reliability work pays off most. Items with no
+ * effect (optional, or fully masked by redundancy) are omitted.
+ */
+export const getSensitivityRanking = (root: SLAItem): SensitivityEntry[] => {
+  const currentSla = calculateSLA(root);
+  return getAllItems(root)
+    .filter(item => item.id !== root.id)
+    .map(item => {
+      const slaGain = calculateSLAWithOverride(root, item.id) - currentSla;
+      return {
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        slaGain,
+        downtimeSavedPerYear: (slaGain / 100) * YEAR_MINUTES,
+      };
+    })
+    .filter(entry => entry.slaGain > 1e-12)
+    .sort((a, b) => b.slaGain - a.slaGain);
+};
+
 export const getBlastRadiusMap = (root: SLAItem): Record<string, number> => {
   const currentRootSla = calculateSLA(root);
   const allItems = getAllItems(root);

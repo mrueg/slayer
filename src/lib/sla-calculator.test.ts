@@ -7,6 +7,7 @@ import {
   createRandom,
   formatDuration,
   formatSLAPercentage,
+  getSensitivityRanking,
   getBlastRadiusMap,
   runMonteCarlo,
 } from './sla-calculator';
@@ -248,5 +249,39 @@ describe('runMonteCarlo seeding', () => {
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     expect(mean).toBeGreaterThan(0.48);
     expect(mean).toBeLessThan(0.52);
+  });
+});
+
+describe('getSensitivityRanking', () => {
+  it('ranks the weakest series link first', () => {
+    const root = group('root', 'series', [component('strong', 99.99), component('weak', 99), component('mid', 99.9)]);
+    expect(getSensitivityRanking(root).map(e => e.id)).toEqual(['weak', 'mid', 'strong']);
+  });
+
+  it('reports the downtime saved by perfecting an item', () => {
+    const root = group('root', 'series', [component('a', 99), component('b', 99.9)]);
+    const [top] = getSensitivityRanking(root);
+    const gain = 99.9 - calculateSLA(root);
+    expect(top.slaGain).toBeCloseTo(gain, 10);
+    expect(top.downtimeSavedPerYear).toBeCloseTo((gain / 100) * YEAR_MINUTES, 6);
+  });
+
+  it('ranks a redundant pool below a single point of failure', () => {
+    const root = group('root', 'series', [
+      group('pool', 'parallel', [component('p1', 99), component('p2', 99)]),
+      component('spof', 99.9),
+    ]);
+    const ids = getSensitivityRanking(root).map(e => e.id);
+    expect(ids[0]).toBe('spof');
+    expect(ids.indexOf('pool')).toBeLessThan(ids.indexOf('p1'));
+  });
+
+  it('omits the root, optional items and perfect items', () => {
+    const root = group('root', 'series', [
+      component('a', 99),
+      component('opt', 90, { isOptional: true }),
+      component('perfect', 100),
+    ]);
+    expect(getSensitivityRanking(root).map(e => e.id)).toEqual(['a']);
   });
 });
