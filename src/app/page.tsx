@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Calculator,
+  Undo2,
+  Redo2,
   RefreshCcw,
   Eraser,
   Network,
@@ -44,6 +46,8 @@ import {
 } from '@/lib/sla-calculator';
 import { ConfigError, clearFailures, decodeShareHash, encodeShareHash, parseConfig } from '@/lib/config';
 import { generateId } from '@/lib/id';
+import { createHistory, historyReducer } from '@/lib/history';
+import { loadSavedModel, saveModel } from '@/lib/autosave';
 import { normalizeItem } from '@/lib/normalize';
 import { updateItemInTree, removeItemFromTree, addChildToGroup } from '@/lib/tree';
 import { cn } from '@/lib/cn';
@@ -122,7 +126,13 @@ export default function ReliabilityModeling() {
     ]
   };
 
-  const [root, setRoot] = useState<SLAItem>(defaultSystem);
+  const [modelHistory, dispatchHistory] = React.useReducer(historyReducer<SLAItem>, defaultSystem, createHistory);
+  const root = modelHistory.present;
+  // Every model change is an undo step; edits with the same coalesceKey in quick succession merge
+  const setRoot = useCallback((value: SLAItem, coalesceKey?: string) => {
+    dispatchHistory({ type: 'set', value, coalesceKey, now: Date.now() });
+  }, []);
+  const restoredRef = useRef(false);
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('vertical');
   useEffect(() => watchTheme(), []);
@@ -144,18 +154,61 @@ export default function ReliabilityModeling() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
 
-  // Load from URL on mount
+  // Restore on mount: a shared link wins over the autosaved model
   useEffect(() => {
+    let initial: SLAItem | null = null;
     const hash = window.location.hash.replace('#', '');
     if (hash) {
       try {
-        const decoded = decodeShareHash(hash);
-        setTimeout(() => setRoot(decoded), 0);
+        initial = decodeShareHash(hash);
+        // Drop the hash so a reload keeps later (autosaved) edits instead of the shared version
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
       } catch (err) {
         console.error('Failed to decode configuration from URL', err);
       }
     }
+    initial ??= loadSavedModel();
+    setTimeout(() => {
+      if (initial) dispatchHistory({ type: 'replace', value: initial });
+      restoredRef.current = true;
+    }, 0);
   }, []);
+
+  // Autosave, but never before the saved model was restored (that would overwrite it with the default)
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    const timer = setTimeout(() => saveModel(root), 300);
+    return () => clearTimeout(timer);
+  }, [root]);
+
+  const handleUndo = useCallback(() => {
+    setSimulationResult(null);
+    dispatchHistory({ type: 'undo' });
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    setSimulationResult(null);
+    dispatchHistory({ type: 'redo' });
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      // Leave text fields their native undo
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      const key = event.key.toLowerCase();
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      } else if ((key === 'z' && event.shiftKey) || key === 'y') {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleUndo, handleRedo]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -179,7 +232,6 @@ export default function ReliabilityModeling() {
       const encoded = encodeShareHash(root);
       const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
       navigator.clipboard.writeText(url);
-      window.location.hash = encoded;
       setShowShareTooltip(true);
       setTimeout(() => setShowShareTooltip(false), 2000);
     } catch {
@@ -294,10 +346,11 @@ export default function ReliabilityModeling() {
 
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
     setSimulationResult(null); // Reset simulation when data changes
+    const coalesceKey = `${id}:${Object.keys(updates).sort().join(',')}`;
     if (id === root.id) {
-      setRoot(normalizeItem({ ...root, ...updates }));
+      setRoot(normalizeItem({ ...root, ...updates }), coalesceKey);
     } else {
-      setRoot({ ...root, children: updateItemInTree(root.children || [], id, updates) });
+      setRoot({ ...root, children: updateItemInTree(root.children || [], id, updates) }, coalesceKey);
     }
   };
 
@@ -389,7 +442,8 @@ export default function ReliabilityModeling() {
                   if (chaosMode) {
                     // Leaving chaos mode restores every injected failure so it
                     // doesn't leak into normal mode, share links or exports.
-                    setRoot(clearFailures(root));
+                    // Also from history, so undo can't bring failures back outside chaos mode
+                    dispatchHistory({ type: 'mapAll', fn: clearFailures });
                     setSimulationResult(null);
                   }
                   setChaosMode(!chaosMode);
@@ -408,6 +462,24 @@ export default function ReliabilityModeling() {
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
 
             <div className="flex items-center gap-1">
+              <button
+                onClick={handleUndo}
+                disabled={modelHistory.past.length === 0}
+                className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleRedo}
+                disabled={modelHistory.future.length === 0}
+                className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Redo (Ctrl+Shift+Z)"
+                aria-label="Redo"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
               <div className="relative" ref={templateRef}>
                 <button 
                   onClick={() => setShowTemplates(!showTemplates)}
