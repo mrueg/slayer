@@ -124,23 +124,17 @@ const base64UrlToBytes = (encoded: string): Uint8Array => {
   return Uint8Array.from(binary, c => c.charCodeAt(0));
 };
 
-/** Encodes a configuration for the URL hash (UTF-8 safe, base64url). */
-export const encodeShareHash = (root: SLAItem): string =>
-  bytesToBase64Url(new TextEncoder().encode(JSON.stringify(root)));
+const transform = async (bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> =>
+  new Uint8Array(await new Response(new Blob([bytes as BlobPart]).stream().pipeThrough(stream)).arrayBuffer());
 
-/**
- * Decodes a URL hash produced by encodeShareHash. Also accepts legacy links
- * that were plain btoa() of Latin-1 JSON.
- */
-export const decodeShareHash = (hash: string): SLAItem => {
-  const bytes = base64UrlToBytes(decodeURIComponent(hash.replace(/^#/, '')));
-  let json: string;
-  try {
-    json = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch {
-    json = Array.from(bytes, b => String.fromCharCode(b)).join('');
-  }
-  return parseConfig(JSON.parse(json));
+/** Encodes a configuration for the URL hash: deflate-compressed UTF-8 JSON, base64url. */
+export const encodeShareHash = async (root: SLAItem): Promise<string> =>
+  bytesToBase64Url(await transform(new TextEncoder().encode(JSON.stringify(root)), new CompressionStream('deflate-raw')));
+
+/** Decodes and validates a URL hash produced by encodeShareHash. */
+export const decodeShareHash = async (hash: string): Promise<SLAItem> => {
+  const bytes = await transform(base64UrlToBytes(decodeURIComponent(hash.replace(/^#/, ''))), new DecompressionStream('deflate-raw'));
+  return parseConfig(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
 };
 
 /** Removes all chaos-injected failures from a tree. */
