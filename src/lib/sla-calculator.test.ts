@@ -5,6 +5,7 @@ import {
   calculateReliability,
   calculateSLA,
   formatDuration,
+  formatSLAPercentage,
   getBlastRadiusMap,
   runMonteCarlo,
 } from './sla-calculator';
@@ -209,3 +210,18 @@ describe('formatDuration', () => {
   });
 });
 
+describe('formatSLAPercentage', () => {
+  it.each([
+    [100, '100'],
+    [0, '0'],
+    [99.9, '99.9'],
+    [99.95, '99.95'],
+    [99.12345, '99.12'],
+    [99.99912, '99.99912'],
+    [99, '99'],
+    [50.256, '50.25'],
+    [99.9999999999999, '99.999999999999'],
+  ])('formats %f as %s', (value, expected) => {
+    expect(formatSLAPercentage(value)).toBe(expected);
+  });
+});
