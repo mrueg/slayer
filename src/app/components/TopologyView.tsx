@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SLAItem, calculateSLA, formatSLAPercentage } from '@/lib/sla-calculator';
+import { SLAItem, FailureDomain, calculateSLA, formatSLAPercentage } from '@/lib/sla-calculator';
 import { MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Skull, Flame } from 'lucide-react';
 import KillModal from './KillModal';
 import { cn } from '@/lib/cn';
@@ -24,6 +24,7 @@ const TopologyNode: React.FC<{
   chaosMode: boolean;
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
   blastRadiusMap: Record<string, number>;
+  failureDomains: FailureDomain[];
 }> = ({ 
   item, 
   depth,
@@ -31,10 +32,11 @@ const TopologyNode: React.FC<{
   layout,
   chaosMode,
   onUpdate,
-  blastRadiusMap
+  blastRadiusMap,
+  failureDomains
 }) => {
   const isGroup = item.type === 'group';
-  const sla = calculateSLA(item);
+  const sla = calculateSLA(item, failureDomains);
   const isBottleneck = bottleneckIds.includes(item.id);
   const isOptional = item.isOptional;
   const isVertical = layout === 'vertical';
@@ -334,6 +336,7 @@ const TopologyNode: React.FC<{
               chaosMode={chaosMode}
               onUpdate={onUpdate}
               blastRadiusMap={blastRadiusMap}
+              failureDomains={failureDomains}
             />
           ))}
         </div>
@@ -366,6 +369,7 @@ export default function TopologyView({ root, bottleneckIds, layout, chaosMode, o
           chaosMode={chaosMode}
           onUpdate={onUpdate}
           blastRadiusMap={blastRadiusMap}
+          failureDomains={root.failureDomains || []}
         />
       </div>
       

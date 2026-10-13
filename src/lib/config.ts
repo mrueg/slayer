@@ -1,4 +1,4 @@
-import type { DowntimePeriod, InputMode, SLAItem } from './sla-calculator';
+import type { DowntimePeriod, FailureDomain, InputMode, SLAItem } from './sla-calculator';
 
 const MAX_DEPTH = 64;
 
@@ -15,6 +15,28 @@ const RANGES: Partial<Record<keyof SLAItem, [number, number]>> = {
   minReplicasRequired: [1, 99],
   minChildrenRequired: [1, Infinity],
   failedReplicas: [0, 99],
+};
+
+const parseFailureDomains = (raw: unknown, path: string): FailureDomain[] => {
+  if (!Array.isArray(raw)) throw new ConfigError(`${path} must be an array`);
+  const ids = new Set<string>();
+  return raw.map((entry, i) => {
+    const entryPath = `${path}[${i}]`;
+    if (!isRecord(entry)) throw new ConfigError(`${entryPath} must be an object`);
+    const id = readString(entry, 'id', entryPath);
+    if (!id) throw new ConfigError(`${entryPath}.id is required`);
+    if (ids.has(id)) throw new ConfigError(`${entryPath}.id "${id}" is duplicated`);
+    ids.add(id);
+    const sla = readNumber(entry, 'sla', entryPath);
+    if (sla === undefined || sla < 0 || sla > 100) throw new ConfigError(`${entryPath}.sla must be between 0 and 100`);
+    const domain: FailureDomain = { id, name: readString(entry, 'name', entryPath) ?? '', sla };
+    const mttr = readNumber(entry, 'mttr', entryPath);
+    if (mttr !== undefined) {
+      if (mttr < 0) throw new ConfigError(`${entryPath}.mttr must be between 0 and Infinity`);
+      domain.mttr = mttr;
+    }
+    return domain;
+  });
 };
 
 const validateRanges = (item: SLAItem, path: string) => {
@@ -92,6 +114,16 @@ export const parseConfig = (input: unknown): SLAItem => {
       if (value !== undefined) item[key] = value;
     }
 
+    if (raw.domains !== undefined && raw.domains !== null) {
+      if (!Array.isArray(raw.domains) || raw.domains.some(d => typeof d !== 'string')) {
+        throw new ConfigError(`${path}.domains must be an array of strings`);
+      }
+      if (raw.domains.length > 0) item.domains = [...new Set(raw.domains as string[])];
+    }
+    if (depth === 0 && raw.failureDomains !== undefined && raw.failureDomains !== null) {
+      item.failureDomains = parseFailureDomains(raw.failureDomains, `${path}.failureDomains`);
+    }
+
     const inputMode = readEnum<InputMode>(raw, 'inputMode', ['percentage', 'downtime']);
     if (inputMode) item.inputMode = inputMode;
     const downtimePeriod = readEnum<DowntimePeriod>(raw, 'downtimePeriod', ['day', 'month', 'year']);
@@ -108,7 +140,19 @@ export const parseConfig = (input: unknown): SLAItem => {
     return item;
   };
 
-  return parseItem(input, 'root', 0);
+  const root = parseItem(input, 'root', 0);
+  // Drop references to domains that are not defined
+  const defined = new Set((root.failureDomains || []).map(d => d.id));
+  const pruneDomains = (item: SLAItem) => {
+    if (item.domains) {
+      const kept = item.domains.filter(d => defined.has(d));
+      if (kept.length > 0) item.domains = kept;
+      else delete item.domains;
+    }
+    item.children?.forEach(pruneDomains);
+  };
+  pruneDomains(root);
+  return root;
 };
 
 const bytesToBase64Url = (bytes: Uint8Array): string => {

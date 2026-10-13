@@ -36,6 +36,8 @@ import {
   formatSLAPercentage,
   DowntimePeriod,
   findBottleneck,
+  getDomainImpact,
+  FailureDomain,
   getSensitivityRanking,
   calculateErrorBudget,
   getCalculationSteps,
@@ -49,7 +51,7 @@ import { generateId } from '@/lib/id';
 import { createHistory, historyReducer } from '@/lib/history';
 import { loadSavedModel, saveModel } from '@/lib/autosave';
 import { normalizeItem } from '@/lib/normalize';
-import { updateItemInTree, removeItemFromTree, addChildToGroup } from '@/lib/tree';
+import { updateItemInTree, removeItemFromTree, addChildToGroup, removeDomainReferences } from '@/lib/tree';
 import { cn } from '@/lib/cn';
 import { renderDiagramSvg } from '@/lib/diagram';
 import { renderReportHtml, renderReportMarkdown } from '@/lib/report';
@@ -63,6 +65,7 @@ import CalculationBreakdown from '@/app/components/CalculationBreakdown';
 import TopologyView from '@/app/components/TopologyView';
 import SensitivityRanking from '@/app/components/SensitivityRanking';
 import ModelChecks from '@/app/components/ModelChecks';
+import FailureDomainsPanel from '@/app/components/FailureDomainsPanel';
 import { getModelWarnings, type ModelWarning } from '@/lib/warnings';
 import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
 
@@ -326,6 +329,7 @@ export default function ReliabilityModeling() {
     bottleneck, 
     sensitivityRanking,
     modelWarnings,
+    domainImpact,
     reliability, 
     calculationSteps, 
     errorBudget,
@@ -339,6 +343,7 @@ export default function ReliabilityModeling() {
       bottleneck: findBottleneck(root),
       sensitivityRanking: getSensitivityRanking(root),
       modelWarnings: getModelWarnings(root),
+      domainImpact: getDomainImpact(root),
       reliability: calculateReliability(root),
       calculationSteps: getCalculationSteps(root),
       errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod),
@@ -388,6 +393,26 @@ export default function ReliabilityModeling() {
     } else {
       setRoot({ ...root, children: updateItemInTree(root.children || [], id, updates) }, coalesceKey);
     }
+  };
+
+  const failureDomains = root.failureDomains || [];
+
+  const handleAddDomain = () => {
+    setSimulationResult(null);
+    const domain: FailureDomain = { id: generateId(), name: `Zone ${failureDomains.length + 1}`, sla: 99.99, mttr: 120 };
+    setRoot({ ...root, failureDomains: [...failureDomains, domain] });
+  };
+
+  const handleUpdateDomain = (id: string, updates: Partial<FailureDomain>) => {
+    setSimulationResult(null);
+    setRoot({ ...root, failureDomains: failureDomains.map(d => (d.id === id ? { ...d, ...updates } : d)) }, `domain:${id}:${Object.keys(updates).sort().join(',')}`);
+  };
+
+  const handleRemoveDomain = (id: string) => {
+    setSimulationResult(null);
+    const remaining = failureDomains.filter(d => d.id !== id);
+    const untagged = removeDomainReferences(root, id);
+    setRoot({ ...untagged, failureDomains: remaining.length > 0 ? remaining : undefined });
   };
 
   const onRemove = (id: string) => {
@@ -668,6 +693,7 @@ export default function ReliabilityModeling() {
                 bottleneckIds={bottleneck.ids}
                 chaosMode={chaosMode}
                 warnings={warningsById}
+                failureDomains={failureDomains}
               />
             ) : (
               <TopologyView 
@@ -745,6 +771,14 @@ export default function ReliabilityModeling() {
             <ModelChecks warnings={modelWarnings} canNavigate={view === 'list'} />
 
             <SensitivityRanking ranking={sensitivityRanking} />
+
+            <FailureDomainsPanel
+              domains={failureDomains}
+              impact={domainImpact}
+              onAdd={handleAddDomain}
+              onUpdate={handleUpdateDomain}
+              onRemove={handleRemoveDomain}
+            />
 
             <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-8">
               <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
