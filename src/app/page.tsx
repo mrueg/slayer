@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import {
   Calculator,
   RefreshCcw,
@@ -46,6 +46,7 @@ import { generateId } from '@/lib/id';
 import { normalizeItem } from '@/lib/normalize';
 import { updateItemInTree, removeItemFromTree, addChildToGroup } from '@/lib/tree';
 import { cn } from '@/lib/cn';
+import { isDarkMode, setDarkMode, subscribeToTheme } from '@/lib/theme';
 import { TEMPLATES } from '@/app/templates';
 import ItemNode from '@/app/components/ItemNode';
 import HelpModal from '@/app/components/HelpModal';
@@ -122,7 +123,8 @@ export default function ReliabilityModeling() {
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('vertical');
-  const [darkMode, setDarkMode] = useState(false);
+  // The server render can't know the theme; the client reads it from <html> after hydration
+  const darkMode = useSyncExternalStore(subscribeToTheme, isDarkMode, () => false);
   const [chaosMode, setChaosMode] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -140,14 +142,6 @@ export default function ReliabilityModeling() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
 
   // Load from URL on mount
   useEffect(() => {
