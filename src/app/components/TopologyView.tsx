@@ -2,17 +2,10 @@
 
 import React, { useState } from 'react';
 import { SLAItem, calculateSLA, formatSLAPercentage } from '@/lib/sla-calculator';
-import { 
-  Layers, Component, Zap, Shield, Database, Globe, MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Server, ZapOff, HardDrive, Cpu, Network,
-  Cloud, Lock, Settings, MessageSquare, Mail, Terminal, Box, Smartphone, Monitor, Code, Activity, Skull, Flame
-} from 'lucide-react';
+import { MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Skull, Flame } from 'lucide-react';
 import KillModal from './KillModal';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/cn';
+import { getIcon } from '@/app/icons';
 
 interface TopologyViewProps {
   root: SLAItem;
@@ -22,53 +15,6 @@ interface TopologyViewProps {
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
   blastRadiusMap: Record<string, number>;
 }
-
-const ICON_MAP = {
-  layers: Layers,
-  component: Component,
-  database: Database,
-  globe: Globe,
-  zap: Zap,
-  shield: Shield,
-  zapOff: ZapOff,
-  server: Server,
-  hardDrive: HardDrive,
-  cpu: Cpu,
-  cloud: Cloud,
-  lock: Lock,
-  settings: Settings,
-  messageSquare: MessageSquare,
-  mail: Mail,
-  terminal: Terminal,
-  box: Box,
-  smartphone: Smartphone,
-  monitor: Monitor,
-  code: Code,
-  network: Network,
-  activity: Activity
-};
-
-const getIcon = (item: SLAItem) => {
-  if (item.icon && ICON_MAP[item.icon as keyof typeof ICON_MAP]) {
-    const IconComp = ICON_MAP[item.icon as keyof typeof ICON_MAP];
-    return <IconComp className="w-4 h-4" />;
-  }
-
-  const name = item.name.toLowerCase();
-  const type = item.type;
-  
-  if (type === 'group') return <Layers className="w-4 h-4 text-blue-500" />;
-  if (name.includes('db') || name.includes('data') || name.includes('aurora')) return <Database className="w-4 h-4 text-amber-500" />;
-  if (name.includes('dns') || name.includes('global') || name.includes('cdn')) return <Globe className="w-4 h-4 text-indigo-500" />;
-  if (name.includes('auth') || name.includes('shield') || name.includes('security')) return <Shield className="w-4 h-4 text-emerald-500" />;
-  if (name.includes('api') || name.includes('service') || name.includes('lambda')) return <Zap className="w-4 h-4 text-orange-500" />;
-  if (name.includes('power') || name.includes('grid') || name.includes('gen')) return <ZapOff className="w-4 h-4 text-yellow-500" />;
-  if (name.includes('rack') || name.includes('blade') || name.includes('server')) return <Server className="w-4 h-4 text-slate-500" />;
-  if (name.includes('router') || name.includes('switch') || name.includes('net')) return <Network className="w-4 h-4 text-blue-400" />;
-  if (name.includes('storage') || name.includes('s3') || name.includes('disk')) return <HardDrive className="w-4 h-4 text-cyan-500" />;
-  if (name.includes('compute') || name.includes('cpu') || name.includes('node')) return <Cpu className="w-4 h-4 text-red-500" />;
-  return <Component className="w-4 h-4 text-slate-400" />;
-};
 
 const TopologyNode: React.FC<{ 
   item: SLAItem; 
@@ -193,7 +139,7 @@ const TopologyNode: React.FC<{
                 "p-1.5 rounded-lg transition-colors duration-500",
                 isDown ? "bg-red-100 dark:bg-red-900/40" : (isDegraded ? "bg-orange-100 dark:bg-orange-900/30" : (isGroup ? "bg-blue-50 dark:bg-blue-900/20" : "bg-slate-800 dark:bg-slate-900"))
               )}>
-                {isDown ? <Skull className="w-4 h-4 text-red-600" /> : (isDegraded ? <AlertTriangle className="w-4 h-4 text-orange-600" /> : getIcon(item))}
+                {isDown ? <Skull className="w-4 h-4 text-red-600" /> : (isDegraded ? <AlertTriangle className="w-4 h-4 text-orange-600" /> : getIcon(item, true))}
               </div>
               <span className={cn(
                 "font-bold text-xs truncate transition-colors duration-500",
