@@ -1761,7 +1761,7 @@ export default function ReliabilityModeling() {
 
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
     setSimulationResult(null); // Reset simulation when data changes
-    if (id === 'root') {
+    if (id === root.id) {
       setRoot({ ...root, ...updates });
     } else {
       setRoot({ ...root, children: updateItemInTree(root.children || [], id, updates) });
@@ -1770,7 +1770,7 @@ export default function ReliabilityModeling() {
 
   const onRemove = (id: string) => {
     setSimulationResult(null);
-    if (id !== 'root') {
+    if (id !== root.id) {
       setRoot({ ...root, children: removeItemFromTree(root.children || [], id) });
     }
   };
@@ -1781,7 +1781,7 @@ export default function ReliabilityModeling() {
       ? { id: Math.random().toString(36).substr(2, 9), name: 'New Component', type: 'component', sla: 99.9 }
       : { id: Math.random().toString(36).substr(2, 9), name: 'New Group', type: 'group', config: 'series', children: [] };
     
-    if (groupId === 'root') {
+    if (groupId === root.id) {
       setRoot({ ...root, children: [...(root.children || []), newItem] });
     } else {
       setRoot({ ...root, children: addChildToGroup(root.children || [], groupId, newItem) });
