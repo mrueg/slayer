@@ -58,6 +58,10 @@ export const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
       config: 'parallel',
       failoverSla: 99.99,
       notes: "Standard HA pattern with primary and hot standby.",
+      failureDomains: [
+        { id: 'use1-az1', name: 'us-east-1a', sla: 99.99, mttr: 180 },
+        { id: 'use1-az2', name: 'us-east-1b', sla: 99.99, mttr: 180 },
+      ],
       children: [
         { 
           id: 'primary', 
@@ -68,7 +72,8 @@ export const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           rto: 30,
           rpo: 0,
           notes: "Single-instance SLA for RDS.",
-          mttr: 60
+          mttr: 60,
+          domains: ['use1-az1']
         },
         { 
           id: 'standby', 
@@ -79,7 +84,8 @@ export const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
           rto: 5,
           rpo: 0,
           notes: "Synchronous replication enabled.",
-          mttr: 60
+          mttr: 60,
+          domains: ['use1-az2']
         },
         { 
           id: 'backup', 

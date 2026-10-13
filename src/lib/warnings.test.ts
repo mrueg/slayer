@@ -61,3 +61,43 @@ describe('getModelWarnings', () => {
     expect(getModelWarnings(root)).toEqual([]);
   });
 });
+
+describe('failure domain checks', () => {
+  const domains = [{ id: 'az1', name: 'us-east-1a', sla: 99.99 }, { id: 'az2', name: 'us-east-1b', sla: 99.99 }];
+
+  it('flags redundancy that lives in a single domain', () => {
+    const root = group('root', 'parallel', [
+      component('a', 99.9, { domains: ['az1'] }),
+      component('b', 99.9, { domains: ['az1'] }),
+    ], { failureDomains: domains });
+    expect(messagesFor(root, 'root')).toEqual(['A failure of us-east-1a takes down this whole group: its redundant paths share that domain.']);
+  });
+
+  it('is quiet when redundancy spans domains', () => {
+    const root = group('root', 'parallel', [
+      component('a', 99.9, { domains: ['az1'] }),
+      component('b', 99.9, { domains: ['az2'] }),
+    ], { failureDomains: domains });
+    expect(getModelWarnings(root)).toEqual([]);
+  });
+
+  it('counts against how many children a k-of-n group can lose', () => {
+    const children = [
+      component('a', 99.9, { domains: ['az1'] }),
+      component('b', 99.9, { domains: ['az1'] }),
+      component('c', 99.9, { domains: ['az2'] }),
+    ];
+    // 1 of 3 survives losing az1; 2 of 3 does not
+    expect(getModelWarnings(group('root', 'parallel', children, { failureDomains: domains }))).toEqual([]);
+    expect(messagesFor(group('root', 'parallel', children, { failureDomains: domains, minChildrenRequired: 2 }), 'root')[0]).toContain('us-east-1a');
+  });
+
+  it('sees through nested groups and skips domains the group itself is tagged with', () => {
+    const nested = group('root', 'parallel', [
+      group('left', 'series', [component('a', 99.9, { domains: ['az1'] }), component('x', 99.9)]),
+      component('b', 99.9, { domains: ['az1'] }),
+    ], { failureDomains: domains });
+    expect(messagesFor(nested, 'root')[0]).toContain('us-east-1a');
+    expect(getModelWarnings({ ...nested, domains: ['az1'] })).toEqual([]);
+  });
+});

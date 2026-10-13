@@ -2,6 +2,18 @@ export type Configuration = 'series' | 'parallel';
 export type InputMode = 'percentage' | 'downtime';
 export type DowntimePeriod = 'day' | 'month' | 'year';
 
+/**
+ * Infrastructure that several items share, such as an availability zone,
+ * region or provider. When it fails, every item tagged with it fails at
+ * the same time (a common-cause failure). Defined on the root item.
+ */
+export interface FailureDomain {
+  id: string;
+  name: string;
+  sla: number; // Percentage availability of the domain itself
+  mttr?: number; // Mean Time To Recovery in minutes
+}
+
 export interface SLAItem {
   id: string;
   name: string;
@@ -23,6 +35,8 @@ export interface SLAItem {
   downtimePeriod?: DowntimePeriod;
   rto?: number; // Recovery Time Objective in minutes
   rpo?: number; // Recovery Point Objective in minutes
+  domains?: string[]; // Ids of failure domains this item depends on
+  failureDomains?: FailureDomain[]; // Domain definitions (on the root item)
 }
 
 export interface CalculationResult {
@@ -123,6 +137,7 @@ const combineGroup = (item: SLAItem, probabilities: number[]): number => {
 interface Overrides {
   forceUpId?: string;
   forceDownId?: string;
+  downDomains?: ReadonlySet<string>;
 }
 
 interface NodeMetrics {
@@ -140,9 +155,13 @@ interface NodeMetrics {
  * Monte Carlo simulation agrees with the headline SLA.
  */
 const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
-  if (item.id === overrides.forceUpId) return { availability: 1, frequency: 0 };
   if (item.id === overrides.forceDownId) return { availability: 0, frequency: 0 };
   if (item.isOptional) return { availability: 1, frequency: 0 };
+  // A failed domain takes the item down regardless of the item's own health
+  if (overrides.downDomains && item.domains?.some(d => overrides.downDomains!.has(d))) {
+    return { availability: 0, frequency: 0 };
+  }
+  if (item.id === overrides.forceUpId) return { availability: 1, frequency: 0 };
 
   let base: NodeMetrics;
 
@@ -184,7 +203,87 @@ const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
   return { availability, frequency };
 };
 
-export const calculateSLA = (item: SLAItem): number => evaluate(item).availability * 100;
+const getAllItems = (item: SLAItem): SLAItem[] =>
+  [item, ...(item.children || []).flatMap(getAllItems)];
+
+// Domain states less likely than this are skipped; their effect is far below display precision
+const DOMAIN_STATE_EPSILON = 1e-15;
+const DEFAULT_DOMAIN_MTTR = 120;
+
+/** Domains that are defined and referenced by at least one item. */
+const getRelevantDomains = (root: SLAItem, domains: FailureDomain[]): FailureDomain[] => {
+  if (domains.length === 0) return [];
+  const used = new Set(getAllItems(root).flatMap(item => item.domains || []));
+  return domains.filter(domain => used.has(domain.id));
+};
+
+interface DomainState {
+  down: Set<string>;
+  probability: number;
+}
+
+const enumerateDomainStates = (domains: FailureDomain[]): DomainState[] => {
+  const states: DomainState[] = [];
+  const walk = (index: number, down: string[], probability: number) => {
+    if (probability < DOMAIN_STATE_EPSILON) return;
+    if (index === domains.length) {
+      states.push({ down: new Set(down), probability });
+      return;
+    }
+    const availability = clamp(domains[index].sla / 100, 0, 1);
+    walk(index + 1, down, probability * availability);
+    walk(index + 1, [...down, domains[index].id], probability * (1 - availability));
+  };
+  walk(0, [], 1);
+  return states;
+};
+
+/**
+ * Evaluates a tree including shared failure domains by conditioning on
+ * which domains are up. Domain failure frequencies are added with the same
+ * Birnbaum formula used for components, so frequency × MTTR stays
+ * consistent with the availability.
+ */
+const evaluateSystem = (root: SLAItem, overrides: Overrides = {}, domains = root.failureDomains || []): NodeMetrics => {
+  const relevant = getRelevantDomains(root, domains);
+  if (relevant.length === 0) return evaluate(root, overrides);
+
+  const results = enumerateDomainStates(relevant).map(state => ({
+    state,
+    metrics: evaluate(root, { ...overrides, downDomains: state.down }),
+  }));
+
+  let availability = 0;
+  let frequency = 0;
+  for (const { state, metrics } of results) {
+    availability += state.probability * metrics.availability;
+    frequency += state.probability * metrics.frequency;
+  }
+
+  for (const domain of relevant) {
+    const domainAvailability = clamp(domain.sla / 100, 0, 1);
+    if (domainAvailability <= 0 || domainAvailability >= 1) continue;
+    const domainFrequency = ((1 - domainAvailability) * YEAR_MINUTES) / (domain.mttr && domain.mttr > 0 ? domain.mttr : DEFAULT_DOMAIN_MTTR);
+    let whenUp = 0;
+    let whenDown = 0;
+    for (const { state, metrics } of results) {
+      if (state.down.has(domain.id)) whenDown += state.probability * metrics.availability;
+      else whenUp += state.probability * metrics.availability;
+    }
+    const importance = whenUp / domainAvailability - whenDown / (1 - domainAvailability);
+    frequency += domainFrequency * Math.max(0, importance);
+  }
+
+  return { availability, frequency };
+};
+
+/**
+ * SLA of an item in percent. Failure domains default to the ones defined on
+ * the item itself (the root); pass the root's domains when evaluating a
+ * subtree.
+ */
+export const calculateSLA = (item: SLAItem, domains?: FailureDomain[]): number =>
+  evaluateSystem(item, {}, domains).availability * 100;
 
 export interface ReliabilityResult {
   sla: number;
@@ -230,8 +329,8 @@ export const calculateDRMetrics = (item: SLAItem): DRResult => {
   };
 };
 
-export const calculateReliability = (item: SLAItem): ReliabilityResult => {
-  const { availability, frequency } = evaluate(item);
+export const calculateReliability = (item: SLAItem, domains?: FailureDomain[]): ReliabilityResult => {
+  const { availability, frequency } = evaluateSystem(item, {}, domains);
   const mttr = frequency > 0 ? ((1 - availability) * YEAR_MINUTES) / frequency : 0;
   return { sla: availability * 100, frequency, mttr };
 };
@@ -246,16 +345,13 @@ export interface BottleneckResult {
  * Used for sensitivity analysis.
  */
 const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number =>
-  evaluate(item, { forceUpId: overrideId }).availability * 100;
+  evaluateSystem(item, { forceUpId: overrideId }).availability * 100;
 
 /**
  * Calculates the SLA of an item while treating a specific ID as 0% available.
  */
 const calculateSLAWithForcedFailure = (item: SLAItem, forcedFailedId: string): number =>
-  evaluate(item, { forceDownId: forcedFailedId }).availability * 100;
-
-const getAllItems = (item: SLAItem): SLAItem[] =>
-  [item, ...(item.children || []).flatMap(getAllItems)];
+  evaluateSystem(item, { forceDownId: forcedFailedId }).availability * 100;
 
 const getSerialMap = (item: SLAItem, parent?: SLAItem, map: Record<string, boolean> = {}): Record<string, boolean> => {
   if (!parent || parent.config === 'series' || (parent.config === 'parallel' && getActiveChildren(parent).length <= 1)) {
@@ -393,7 +489,8 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
   }
 
   const steps: CalculationStep[] = [];
-  const rel = calculateReliability(item);
+  // Independent failures only; shared failure domains are added as a final step
+  const rel = calculateReliability(item, []);
   const dr = calculateDRMetrics(item);
 
   if (item.type === 'component') {
@@ -484,7 +581,50 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
     }
   }
 
+  const domains = getRelevantDomains(item, item.failureDomains || []);
+  if (domains.length > 0) {
+    const withDomains = calculateReliability(item);
+    steps.push({
+      id: `${item.id}:domains`,
+      name: 'Shared failure domains',
+      type: 'group',
+      formula: `Conditioned on ${domains.length} failure domain${domains.length === 1 ? '' : 's'}`,
+      explanation: 'Items in the same domain fail together when the domain fails.',
+      inputValues: domains.map(d => `${d.name}: ${formatSLAPercentage(d.sla)}%`),
+      result: withDomains.sla,
+      mttrResult: withDomains.mttr,
+      frequencyResult: withDomains.frequency,
+      rtoResult: dr.rto,
+      rpoResult: dr.rpo
+    });
+  }
+
   return steps;
+};
+
+export interface DomainImpact {
+  id: string;
+  name: string;
+  itemCount: number; // items tagged with the domain
+  downtimePerYear: number; // minutes of system downtime caused by the domain
+  slaWhileDown: number; // system SLA while the domain is down
+}
+
+/** How much each failure domain costs the system, and what is left while it is down. */
+export const getDomainImpact = (root: SLAItem): DomainImpact[] => {
+  const domains = root.failureDomains || [];
+  const items = getAllItems(root);
+  const current = evaluateSystem(root).availability;
+  return domains.map(domain => {
+    const withDomain = (sla: number) => evaluateSystem(root, {}, domains.map(d => (d.id === domain.id ? { ...d, sla } : d))).availability;
+    return {
+      id: domain.id,
+      name: domain.name,
+      itemCount: items.filter(item => item.domains?.includes(domain.id)).length,
+      downtimePerYear: Math.max(0, withDomain(100) - current) * YEAR_MINUTES,
+      slaWhileDown: withDomain(0) * 100,
+    };
+  });
 };
 
 export interface ErrorBudget {

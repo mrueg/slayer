@@ -14,7 +14,7 @@ import {
   StickyNote,
   Skull
 } from 'lucide-react';
-import { SLAItem, calculateSLA, slaFromDowntime, formatSLAPercentage, DowntimePeriod, InputMode } from '@/lib/sla-calculator';
+import { SLAItem, FailureDomain, calculateSLA, slaFromDowntime, formatSLAPercentage, DowntimePeriod, InputMode } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
 import { getIcon } from '@/app/icons';
 import CloudCatalogPicker from '@/app/components/CloudCatalogPicker';
@@ -22,6 +22,7 @@ import IconPicker from '@/app/components/IconPicker';
 import AutoExpandingTextarea from '@/app/components/AutoExpandingTextarea';
 import KillModal from '@/app/components/KillModal';
 import type { ModelWarning } from '@/lib/warnings';
+import DomainPicker, { DomainChips } from '@/app/components/DomainPicker';
 
 /**
  * Parses a number input. Returns undefined for an empty or invalid field so
@@ -42,6 +43,7 @@ interface ItemNodeProps {
   bottleneckIds: string[];
   chaosMode: boolean;
   warnings?: Record<string, ModelWarning[]>;
+  failureDomains?: FailureDomain[];
 }
 
 const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => {
@@ -62,7 +64,7 @@ const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => 
   );
 };
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings }) => {
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [] }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
@@ -142,9 +144,14 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 "text-xs font-mono px-2 py-0.5 rounded-full transition-colors",
                 item.isOptional ? "bg-slate-200 dark:bg-slate-800 text-slate-500" : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
               )}>
-                {formatSLAPercentage(calculateSLA(item))}%
+                {formatSLAPercentage(calculateSLA(item, failureDomains))}%
               </span>
               <WarningBadge warnings={warnings?.[item.id]} />
+              <DomainPicker
+                domains={failureDomains}
+                selected={item.domains || []}
+                onChange={(domains) => onUpdate(item.id, { domains: domains.length > 0 ? domains : undefined })}
+              />
               {item.isOptional && (
                 <span className="text-[8px] font-black uppercase tracking-tighter bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-1">
                   <ShieldCheck className="w-2 h-2" />
@@ -319,6 +326,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 bottleneckIds={bottleneckIds}
                 chaosMode={chaosMode}
                 warnings={warnings}
+                failureDomains={failureDomains}
               />
             ))}
             <div className="flex gap-2">
@@ -363,6 +371,12 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 )}
               />
               <WarningBadge warnings={warnings?.[item.id]} />
+              <DomainPicker
+                showChips={false}
+                domains={failureDomains}
+                selected={item.domains || []}
+                onChange={(domains) => onUpdate(item.id, { domains: domains.length > 0 ? domains : undefined })}
+              />
               <CloudCatalogPicker 
                 onSelect={(service) => onUpdate(item.id, { 
                   name: service.name, 
@@ -372,6 +386,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 })} 
               />
             </div>
+            <DomainChips domains={failureDomains} selected={item.domains || []} className="mt-1.5" />
           </div>
 
           <div className="flex flex-col gap-1 w-full lg:w-auto">
