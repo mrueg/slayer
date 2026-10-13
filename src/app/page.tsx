@@ -26,9 +26,11 @@ import {
   calculateDRMetrics
 } from '@/lib/sla-calculator';
 import {
+  ConfigError,
   clearFailures,
   decodeShareHash,
-  encodeShareHash
+  encodeShareHash,
+  parseConfig
 } from '@/lib/config';
 import TopologyView from './TopologyView';
 import KillModal from './KillModal';
@@ -1702,14 +1704,14 @@ export default function ReliabilityModeling() {
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        // Basic validation: check if it has an id and type
-        if (json.id && json.type) {
-          setRoot(json);
+        setRoot(parseConfig(json));
+        setSimulationResult(null);
+      } catch (err) {
+        if (err instanceof ConfigError) {
+          alert(`Invalid SLAYER configuration file: ${err.message}`);
         } else {
-          alert('Invalid SLAYER configuration file.');
+          alert('Failed to parse JSON file.');
         }
-      } catch {
-        alert('Failed to parse JSON file.');
       }
     };
     reader.readAsText(file);
