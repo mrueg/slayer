@@ -20,7 +20,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
             </div>
             <div>
               <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Downtime Distribution</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">10,000 simulations of yearly system performance</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{result.iterations.toLocaleString()} simulations of yearly system performance · seed {result.seed}</p>
             </div>
           </div>
           <button 

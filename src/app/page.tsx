@@ -37,7 +37,6 @@ import {
   calculateErrorBudget,
   getCalculationSteps,
   calculateReliability,
-  runMonteCarlo,
   MonteCarloResult,
   getBlastRadiusMap,
   calculateDRMetrics
@@ -53,6 +52,7 @@ import HelpModal from '@/app/components/HelpModal';
 import MonteCarloHistogram from '@/app/components/MonteCarloHistogram';
 import CalculationBreakdown from '@/app/components/CalculationBreakdown';
 import TopologyView from '@/app/components/TopologyView';
+import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
 
 export default function ReliabilityModeling() {
   const defaultSystem: SLAItem = {
@@ -268,16 +268,23 @@ export default function ReliabilityModeling() {
     };
   }, [root, consumedDowntime, budgetPeriod]);
 
+  const runSimulation = useMonteCarloSimulation();
+  // Lets a finished run detect that the model changed while it was running
+  const reliabilityRef = useRef(reliability);
+  useEffect(() => {
+    reliabilityRef.current = reliability;
+  }, [reliability]);
+
   const handleRunSimulation = useCallback(() => {
     setIsSimulating(true);
-    // Use setTimeout to allow the UI to show loading state
-    setTimeout(() => {
-      const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
-      const result = runMonteCarlo(reliability, target, 10000);
-      setSimulationResult(result);
+    const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
+    runSimulation(reliability, target, 10000).then(result => {
+      // null: superseded by a newer run, which will update the state
+      if (result === null) return;
+      if (reliabilityRef.current === reliability) setSimulationResult(result);
       setIsSimulating(false);
-    }, 50);
-  }, [reliability, overrideTargetSla, compositeSla]);
+    });
+  }, [runSimulation, reliability, overrideTargetSla, compositeSla]);
 
   // Run simulation automatically when data changes (if auto-simulate is on)
   useEffect(() => {
