@@ -21,19 +21,32 @@ const sample: SLAItem = {
 };
 
 describe('share hash', () => {
-  it('round-trips non-Latin-1 text', () => {
-    const encoded = encodeShareHash(sample);
+  it('round-trips non-Latin-1 text', async () => {
+    const encoded = await encodeShareHash(sample);
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(decodeShareHash(encoded)).toEqual(sample);
+    expect(await decodeShareHash(encoded)).toEqual(sample);
   });
 
-  it('accepts a leading #', () => {
-    expect(decodeShareHash(`#${encodeShareHash(sample)}`)).toEqual(sample);
+  it('accepts a leading #', async () => {
+    expect(await decodeShareHash(`#${await encodeShareHash(sample)}`)).toEqual(sample);
   });
 
-  it('decodes legacy btoa links', () => {
-    const legacy = { id: 'root', name: 'Legacy', type: 'group', config: 'series', children: [] };
-    expect(decodeShareHash(btoa(JSON.stringify(legacy)))).toEqual(legacy);
+  it('compresses large models', async () => {
+    const big: SLAItem = {
+      id: 'root', name: 'Big', type: 'group', config: 'series',
+      children: Array.from({ length: 40 }, (_, i) => ({
+        id: `service-${i}`, name: `Service ${i}`, type: 'component' as const, sla: 99.95, mttr: 60, replicas: 3, rto: 30, rpo: 5,
+        notes: 'Runs in three availability zones behind a load balancer.',
+      })),
+    };
+    const uncompressed = Buffer.from(JSON.stringify(big)).toString('base64url');
+    const encoded = await encodeShareHash(big);
+    expect(encoded.length).toBeLessThan(uncompressed.length / 4);
+    expect(await decodeShareHash(encoded)).toEqual(big);
+  });
+
+  it('rejects garbage', async () => {
+    await expect(decodeShareHash('not-a-valid-hash')).rejects.toThrow();
   });
 });
 

@@ -156,22 +156,23 @@ export default function ReliabilityModeling() {
 
   // Restore on mount: a shared link wins over the autosaved model
   useEffect(() => {
-    let initial: SLAItem | null = null;
-    const hash = window.location.hash.replace('#', '');
-    if (hash) {
-      try {
-        initial = decodeShareHash(hash);
-        // Drop the hash so a reload keeps later (autosaved) edits instead of the shared version
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      } catch (err) {
-        console.error('Failed to decode configuration from URL', err);
+    const restore = async () => {
+      let initial: SLAItem | null = null;
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        try {
+          initial = await decodeShareHash(hash);
+          // Drop the hash so a reload keeps later (autosaved) edits instead of the shared version
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        } catch (err) {
+          console.error('Failed to decode configuration from URL', err);
+        }
       }
-    }
-    initial ??= loadSavedModel();
-    setTimeout(() => {
+      initial ??= loadSavedModel();
       if (initial) dispatchHistory({ type: 'replace', value: initial });
       restoredRef.current = true;
-    }, 0);
+    };
+    restore();
   }, []);
 
   // Autosave, but never before the saved model was restored (that would overwrite it with the default)
@@ -227,11 +228,11 @@ export default function ReliabilityModeling() {
     }
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     try {
-      const encoded = encodeShareHash(root);
+      const encoded = await encodeShareHash(root);
       const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
-      navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(url);
       setShowShareTooltip(true);
       setTimeout(() => setShowShareTooltip(false), 2000);
     } catch {
