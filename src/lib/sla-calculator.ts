@@ -193,39 +193,41 @@ export interface ReliabilityResult {
 }
 
 export interface DRResult {
-  rto: number;
-  rpo: number;
+  rto?: number; // undefined when no contributing component defines it
+  rpo?: number;
 }
 
+const definedValues = (values: (number | undefined)[]): number[] =>
+  values.filter((v): v is number => v !== undefined && Number.isFinite(v));
+
 export const calculateDRMetrics = (item: SLAItem): DRResult => {
-  if (item.isOptional) return { rto: 0, rpo: 0 };
+  if (item.isOptional) return {};
 
   if (item.type === 'component') {
-    return {
-      rto: item.rto || 0,
-      rpo: item.rpo || 0
-    };
+    return { rto: item.rto, rpo: item.rpo };
   }
 
   const children = getActiveChildren(item);
-  if (children.length === 0) return { rto: 0, rpo: 0 };
+  if (children.length === 0) return {};
 
   const childMetrics = children.map(child => calculateDRMetrics(child));
+  const rtos = definedValues(childMetrics.map(m => m.rto));
+  const rpos = definedValues(childMetrics.map(m => m.rpo));
 
   if (item.config === 'series') {
     return {
       // Series: RTO is the sum (sequential recovery)
-      rto: childMetrics.reduce((acc, m) => acc + m.rto, 0),
+      rto: rtos.length > 0 ? rtos.reduce((acc, v) => acc + v, 0) : undefined,
       // Series: RPO is the max (data is as old as the weakest backup link)
-      rpo: Math.max(...childMetrics.map(m => m.rpo))
-    };
-  } else {
-    // Parallel: You only need ONE to recover
-    return {
-      rto: Math.min(...childMetrics.map(m => m.rto)),
-      rpo: Math.min(...childMetrics.map(m => m.rpo))
+      rpo: rpos.length > 0 ? Math.max(...rpos) : undefined
     };
   }
+
+  // Parallel: You only need ONE to recover
+  return {
+    rto: rtos.length > 0 ? Math.min(...rtos) : undefined,
+    rpo: rpos.length > 0 ? Math.min(...rpos) : undefined
+  };
 };
 
 export const calculateReliability = (item: SLAItem): ReliabilityResult => {
@@ -355,9 +357,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
       inputValues: [],
       result: 100,
       mttrResult: 0,
-      frequencyResult: 0,
-      rtoResult: 0,
-      rpoResult: 0
+      frequencyResult: 0
     }];
   }
 
@@ -413,9 +413,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
         inputValues: [],
         result: rel.sla,
         mttrResult: rel.mttr,
-        frequencyResult: rel.frequency,
-        rtoResult: 0,
-        rpoResult: 0
+        frequencyResult: rel.frequency
       });
     } else {
       children.forEach(child => steps.push(...getCalculationSteps(child)));

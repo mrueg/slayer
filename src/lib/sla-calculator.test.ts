@@ -168,3 +168,28 @@ describe('optional items', () => {
   });
 });
 
+describe('calculateDRMetrics', () => {
+  it('treats missing RTO/RPO as unknown rather than zero', () => {
+    const root = group('root', 'parallel', [component('a', 99, { rto: 30, rpo: 5 }), component('b', 99)]);
+    expect(calculateDRMetrics(root)).toEqual({ rto: 30, rpo: 5 });
+  });
+
+  it('sums defined RTOs and takes the max RPO in series', () => {
+    const root = group('root', 'series', [
+      component('a', 99, { rto: 30, rpo: 5 }),
+      component('b', 99, { rto: 10 }),
+      component('c', 99, { rpo: 60 }),
+    ]);
+    expect(calculateDRMetrics(root)).toEqual({ rto: 40, rpo: 60 });
+  });
+
+  it('is undefined when nothing defines it', () => {
+    expect(calculateDRMetrics(group('root', 'series', [component('a', 99)]))).toEqual({ rto: undefined, rpo: undefined });
+  });
+
+  it('keeps an explicit zero', () => {
+    const root = group('root', 'parallel', [component('a', 99, { rto: 0 }), component('b', 99, { rto: 30 })]);
+    expect(calculateDRMetrics(root).rto).toBe(0);
+  });
+});
+
