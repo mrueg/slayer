@@ -31,6 +31,7 @@ import {
   encodeShareHash
 } from '@/lib/config';
 import TopologyView from './TopologyView';
+import { generateId } from '@/lib/id';
 import KillModal from './KillModal';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -1779,8 +1780,8 @@ export default function ReliabilityModeling() {
   const onAddChild = (groupId: string, type: 'component' | 'group') => {
     setSimulationResult(null);
     const newItem: SLAItem = type === 'component' 
-      ? { id: Math.random().toString(36).substr(2, 9), name: 'New Component', type: 'component', sla: 99.9 }
-      : { id: Math.random().toString(36).substr(2, 9), name: 'New Group', type: 'group', config: 'series', children: [] };
+      ? { id: generateId(), name: 'New Component', type: 'component', sla: 99.9 }
+      : { id: generateId(), name: 'New Group', type: 'group', config: 'series', children: [] };
     
     if (groupId === root.id) {
       setRoot({ ...root, children: [...(root.children || []), newItem] });
