@@ -499,7 +499,7 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
       continue;
     }
 
-    let numIncidents = 0;
+    let numIncidents: number;
     if (lambda > 100) {
       const standardNormal = Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
       numIncidents = Math.max(0, Math.round(lambda + standardNormal * Math.sqrt(lambda)));
