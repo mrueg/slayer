@@ -34,6 +34,7 @@ import {
   formatSLAPercentage,
   DowntimePeriod,
   findBottleneck,
+  getSensitivityRanking,
   calculateErrorBudget,
   getCalculationSteps,
   calculateReliability,
@@ -53,6 +54,7 @@ import HelpModal from '@/app/components/HelpModal';
 import MonteCarloHistogram from '@/app/components/MonteCarloHistogram';
 import CalculationBreakdown from '@/app/components/CalculationBreakdown';
 import TopologyView from '@/app/components/TopologyView';
+import SensitivityRanking from '@/app/components/SensitivityRanking';
 import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
 
 export default function ReliabilityModeling() {
@@ -243,6 +245,7 @@ export default function ReliabilityModeling() {
     compositeSla, 
     downtime, 
     bottleneck, 
+    sensitivityRanking,
     reliability, 
     calculationSteps, 
     errorBudget,
@@ -254,6 +257,7 @@ export default function ReliabilityModeling() {
       compositeSla: sla,
       downtime: getDowntime(sla),
       bottleneck: findBottleneck(root),
+      sensitivityRanking: getSensitivityRanking(root),
       reliability: calculateReliability(root),
       calculationSteps: getCalculationSteps(root),
       errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod),
@@ -597,6 +601,8 @@ export default function ReliabilityModeling() {
                 </div>
               </div>
             </section>
+
+            <SensitivityRanking ranking={sensitivityRanking} />
 
             <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-8">
               <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
