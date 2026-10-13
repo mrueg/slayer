@@ -4,6 +4,7 @@ import {
   calculateDRMetrics,
   calculateReliability,
   calculateSLA,
+  formatDuration,
   getBlastRadiusMap,
   runMonteCarlo,
 } from './sla-calculator';
@@ -190,6 +191,21 @@ describe('calculateDRMetrics', () => {
   it('keeps an explicit zero', () => {
     const root = group('root', 'parallel', [component('a', 99, { rto: 0 }), component('b', 99, { rto: 30 })]);
     expect(calculateDRMetrics(root).rto).toBe(0);
+  });
+});
+
+describe('formatDuration', () => {
+  it.each([
+    [0, '0s'],
+    [0.001, '< 1s'],
+    [0.5, '30s'],
+    [0.999, '1m'],
+    [1.995, '2m'],
+    [59.999, '1h'],
+    [90, '1h 30m'],
+    [24 * 60 + 0.5, '1d 30s'],
+  ])('formats %f minutes as %s', (minutes, expected) => {
+    expect(formatDuration(minutes)).toBe(expected);
   });
 });
 
