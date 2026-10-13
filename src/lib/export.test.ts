@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SLAItem } from './sla-calculator';
+import { calculateSLA, formatSLAPercentage, type SLAItem } from './sla-calculator';
 import { renderDiagramSvg } from './diagram';
 import { localDate, renderReportHtml, renderReportMarkdown } from './report';
 
@@ -100,5 +100,43 @@ describe('renderReportHtml', () => {
   it('escapes user text', () => {
     expect(html).toContain('<title>Shop &lt;Prod&gt; &amp; &quot;Co&quot; — Reliability Report</title>');
     expect(html).not.toMatch(/<Prod>/);
+  });
+});
+
+describe('exports with failure domains', () => {
+  const zoned: SLAItem = {
+    id: 'root', name: 'Zoned', type: 'group', config: 'series',
+    failureDomains: [{ id: 'az1', name: 'us-east-1a', sla: 99.9 }, { id: 'unused', name: 'Unused', sla: 99 }],
+    children: [
+      { id: 'pool', name: 'Pool', type: 'group', config: 'parallel', children: [
+        { id: 'a', name: 'A', type: 'component', sla: 99.9, domains: ['az1'] },
+        { id: 'b', name: 'B', type: 'component', sla: 99.9, domains: ['az1'] },
+      ] },
+    ],
+  };
+  const pool = zoned.children![0];
+  const poolWithDomains = `${formatSLAPercentage(calculateSLA(pool, zoned.failureDomains))}%`;
+  const poolWithout = `${formatSLAPercentage(calculateSLA(pool))}%`;
+
+  it('uses domain-aware SLAs for sub-groups', () => {
+    expect(poolWithDomains).not.toBe(poolWithout);
+    expect(renderDiagramSvg(zoned)).toContain(`>${poolWithDomains}<`);
+    expect(renderReportMarkdown(zoned, options)).toContain(`| ${poolWithDomains} |`);
+    expect(renderReportHtml(zoned, options)).toContain(`>${poolWithDomains}<`);
+  });
+
+  it('lists domains on items and in their own report section', () => {
+    expect(renderDiagramSvg(zoned)).toContain('⌖ us-east-1a');
+    const md = renderReportMarkdown(zoned, options);
+    expect(md).toContain('## Failure Domains');
+    expect(md).toMatch(/\| us-east-1a \| 99\.9% \| 2 \| .+\/year \| 0% \|/);
+    expect(md).toContain('| Unused | 99% | 0 | — | — |');
+    // A's effective SLA includes its zone: 99.9% × 99.9% ≈ 99.8%
+    expect(md).toMatch(/\| .*A \| component \| 99\.8% \| — \| 1h \| — \| — \| us-east-1a \|/);
+    expect(renderReportHtml(zoned, options)).toContain('<h2>Failure Domains</h2>');
+  });
+
+  it('omits the domain section without domains', () => {
+    expect(renderReportMarkdown(model, options)).not.toContain('## Failure Domains');
   });
 });

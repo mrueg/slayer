@@ -1,4 +1,4 @@
-import { calculateSLA, formatSLAPercentage, type SLAItem } from './sla-calculator';
+import { calculateSLA, formatSLAPercentage, type FailureDomain, type SLAItem } from './sla-calculator';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 66;
@@ -12,7 +12,7 @@ export const escapeXml = (text: string): string =>
 
 const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
-const describe = (item: SLAItem): string => {
+const describe = (item: SLAItem, domainNames: Map<string, string>): string => {
   const replicas = item.replicas || 1;
   const parts: string[] = [];
   if (item.type === 'group') {
@@ -21,6 +21,7 @@ const describe = (item: SLAItem): string => {
   }
   if (replicas > 1) parts.push(`${item.minReplicasRequired || 1} of ${replicas} replicas`);
   if (item.isOptional) parts.push('optional');
+  for (const id of item.domains || []) if (domainNames.has(id)) parts.push(`⌖ ${domainNames.get(id)}`);
   return parts.join(' · ');
 };
 
@@ -63,6 +64,9 @@ const treeDepth = (item: SLAItem): number => 1 + Math.max(0, ...(item.children |
  * on-screen theme so exports look the same everywhere.
  */
 export const renderDiagramSvg = (root: SLAItem): string => {
+  // Domains are defined on the root; subtrees need them to include common-cause failures
+  const domains: FailureDomain[] = root.failureDomains || [];
+  const domainNames = new Map(domains.map(d => [d.id, d.name || '(unnamed)']));
   const width = subtreeWidth(root) + PADDING * 2;
   const height = treeDepth(root) * (NODE_HEIGHT + V_GAP) - V_GAP + PADDING * 2;
   const tree = layout(root, PADDING, 0);
@@ -84,12 +88,12 @@ export const renderDiagramSvg = (root: SLAItem): string => {
     const isGroup = item.type === 'group';
     const fill = item.isOptional ? '#f8fafc' : isGroup ? '#eff6ff' : '#ffffff';
     const stroke = isDown ? '#dc2626' : item.isOptional ? '#94a3b8' : isGroup ? '#3b82f6' : '#cbd5e1';
-    const detail = describe(item);
+    const detail = truncate(describe(item, domainNames), 36);
     nodes.push(
       `<g>` +
       `<rect x="${x}" y="${y}" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${isDown ? 2.5 : 1.5}"${item.isOptional ? ' stroke-dasharray="5 4"' : ''}/>` +
       `<text x="${centerX}" y="${y + 22}" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">${escapeXml(truncate(item.name || '(unnamed)', MAX_NAME_CHARS))}</text>` +
-      `<text x="${centerX}" y="${y + 41}" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="${isDown ? '#dc2626' : '#2563eb'}">${isDown ? 'DOWN' : `${formatSLAPercentage(calculateSLA(item))}%`}</text>` +
+      `<text x="${centerX}" y="${y + 41}" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="${isDown ? '#dc2626' : '#2563eb'}">${isDown ? 'DOWN' : `${formatSLAPercentage(calculateSLA(item, domains))}%`}</text>` +
       (detail ? `<text x="${centerX}" y="${y + 57}" text-anchor="middle" font-size="10" fill="#64748b">${escapeXml(detail)}</text>` : '') +
       `</g>`
     );
