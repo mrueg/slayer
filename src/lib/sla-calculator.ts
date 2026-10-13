@@ -667,13 +667,15 @@ export const slaFromDowntime = (seconds: number, period: DowntimePeriod): number
 };
 
 export const formatDuration = (minutes: number): string => {
-  if (minutes <= 0) return '0s';
-  if (minutes < 0.017) return '< 1s';
-  
-  const d = Math.floor(minutes / (24 * 60));
-  const h = Math.floor((minutes % (24 * 60)) / 60);
-  const m = Math.floor(minutes % 60);
-  const s = Math.round((minutes % 1) * 60);
+  if (!Number.isFinite(minutes) || minutes <= 0) return '0s';
+  if (minutes < 1 / 60) return '< 1s';
+
+  // Round to whole seconds first so carries propagate (no "1m 60s")
+  const totalSeconds = Math.round(minutes * 60);
+  const d = Math.floor(totalSeconds / 86400);
+  const h = Math.floor((totalSeconds % 86400) / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
 
   const parts = [];
   if (d > 0) parts.push(`${d}d`);
