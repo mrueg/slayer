@@ -26,6 +26,7 @@ import {
   calculateDRMetrics
 } from '@/lib/sla-calculator';
 import {
+  clearFailures,
   decodeShareHash,
   encodeShareHash
 } from '@/lib/config';
@@ -1852,7 +1853,15 @@ export default function ReliabilityModeling() {
 
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
               <button
-                onClick={() => setChaosMode(!chaosMode)}
+                onClick={() => {
+                  if (chaosMode) {
+                    // Leaving chaos mode restores every injected failure so it
+                    // doesn't leak into normal mode, share links or exports.
+                    setRoot(clearFailures(root));
+                    setSimulationResult(null);
+                  }
+                  setChaosMode(!chaosMode);
+                }}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
                   chaosMode ? "bg-red-600 text-white shadow-md animate-pulse" : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
