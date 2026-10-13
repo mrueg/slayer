@@ -625,22 +625,27 @@ export const getHistogramData = (distribution: number[], bins: number = 40): { b
   }));
 };
 
+/**
+ * Formats an SLA percentage keeping every leading "nine" plus two further
+ * significant digits (e.g. 99.95, 99.12, 99.99912). Digits beyond that are
+ * truncated, never rounded up, so availability is not overstated.
+ */
 export const formatSLAPercentage = (value: number): string => {
+  if (!Number.isFinite(value)) return '0';
   if (value >= 100) return '100';
   if (value <= 0) return '0';
 
-  // Use a high fixed precision to ensure we have enough digits
-  const str = value.toFixed(12);
+  const DECIMALS = 12;
+  const fixed = value.toFixed(DECIMALS);
+  // Values just below 100 must not round up to "100"
+  const str = fixed.startsWith('100') ? `99.${'9'.repeat(DECIMALS)}` : fixed;
   const [intPart, fracPart] = str.split('.');
-  
-  let resultFrac = '';
-  for (let i = 0; i < fracPart.length; i++) {
-    const digit = fracPart[i];
-    resultFrac += digit;
-    if (digit !== '9') break;
-  }
-  
-  return `${intPart}.${resultFrac}`;
+
+  let leadingNines = 0;
+  while (leadingNines < fracPart.length && fracPart[leadingNines] === '9') leadingNines++;
+
+  const resultFrac = fracPart.slice(0, Math.min(fracPart.length, leadingNines + 2)).replace(/0+$/, '');
+  return resultFrac ? `${intPart}.${resultFrac}` : intPart;
 };
 
 export const getDowntime = (sla: number): Omit<CalculationResult, 'compositeSla'> => {
