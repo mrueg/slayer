@@ -4,6 +4,7 @@ import {
   calculateDRMetrics,
   calculateReliability,
   calculateSLA,
+  createRandom,
   formatDuration,
   formatSLAPercentage,
   getBlastRadiusMap,
@@ -223,5 +224,29 @@ describe('formatSLAPercentage', () => {
     [99.9999999999999, '99.999999999999'],
   ])('formats %f as %s', (value, expected) => {
     expect(formatSLAPercentage(value)).toBe(expected);
+  });
+});
+
+describe('runMonteCarlo seeding', () => {
+  const rel = calculateReliability(group('root', 'series', [component('a', 99, { mttr: 60 }), component('b', 99.5, { mttr: 30 })]));
+
+  it('reproduces a run from its seed', () => {
+    const first = runMonteCarlo(rel, 99.9, 2000);
+    const again = runMonteCarlo(rel, 99.9, 2000, first.seed);
+    expect(again).toEqual(first);
+  });
+
+  it('produces different runs for different seeds', () => {
+    expect(runMonteCarlo(rel, 99.9, 2000, 1).distribution).not.toEqual(runMonteCarlo(rel, 99.9, 2000, 2).distribution);
+  });
+
+  it('generates uniform floats in [0, 1)', () => {
+    const random = createRandom(42);
+    const values = Array.from({ length: 10000 }, random);
+    expect(Math.min(...values)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...values)).toBeLessThan(1);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    expect(mean).toBeGreaterThan(0.48);
+    expect(mean).toBeLessThan(0.52);
   });
 });

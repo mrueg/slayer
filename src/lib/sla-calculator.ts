@@ -481,7 +481,30 @@ export const calculateErrorBudget = (targetSla: number, consumedSeconds: number,
   };
 };
 
-export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number, iterations: number = 10000): MonteCarloResult => {
+/**
+ * Seedable PRNG (mulberry32) so simulation runs can be reproduced.
+ * Returns floats in [0, 1).
+ */
+export const createRandom = (seed: number): (() => number) => {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+export const randomSeed = (): number => Math.floor(Math.random() * 0x100000000);
+
+export const runMonteCarlo = (
+  reliability: ReliabilityResult,
+  targetSla: number,
+  iterations: number = 10000,
+  seed: number = randomSeed()
+): MonteCarloResult => {
+  const random = createRandom(seed);
   const allowedDowntimeMinutes = YEAR_MINUTES * (1 - targetSla / 100);
   const downtimes: number[] = [];
   let breaches = 0;
@@ -501,7 +524,7 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
 
     let numIncidents: number;
     if (lambda > 100) {
-      const standardNormal = Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
+      const standardNormal = Math.sqrt(-2 * Math.log(1 - random())) * Math.cos(2 * Math.PI * random());
       numIncidents = Math.max(0, Math.round(lambda + standardNormal * Math.sqrt(lambda)));
     } else {
       const L = Math.exp(-lambda);
@@ -509,7 +532,7 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
       let p = 1;
       do {
         k++;
-        p *= Math.random();
+        p *= random();
       } while (p > L);
       numIncidents = k - 1;
     }
@@ -519,11 +542,11 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
       // Normal approximation of Gamma distribution for large n
       const mean = numIncidents * mttr;
       const stdDev = Math.sqrt(numIncidents) * mttr;
-      const standardNormal = Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
+      const standardNormal = Math.sqrt(-2 * Math.log(1 - random())) * Math.cos(2 * Math.PI * random());
       yearlyDowntime = Math.max(0, mean + standardNormal * stdDev);
     } else {
       for (let j = 0; j < numIncidents; j++) {
-        yearlyDowntime += -Math.log(1 - Math.random()) * mttr;
+        yearlyDowntime += -Math.log(1 - random()) * mttr;
       }
     }
 
@@ -563,6 +586,7 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
 
   return {
     iterations,
+    seed,
     meanDowntime: mean,
     medianDowntime: median,
     p95Downtime: p95,
@@ -576,6 +600,7 @@ export const runMonteCarlo = (reliability: ReliabilityResult, targetSla: number,
 
 export interface MonteCarloResult {
   iterations: number;
+  seed: number; // pass to runMonteCarlo to reproduce this run
   meanDowntime: number;
   medianDowntime: number;
   p95Downtime: number;
