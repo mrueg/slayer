@@ -94,7 +94,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
       "relative rounded-xl transition-all border",
       isGroup 
         ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm mb-4" 
-        : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 p-4 flex flex-col lg:flex-row gap-4 items-end group",
+        : "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 p-4 flex flex-col lg:flex-row lg:flex-wrap gap-4 items-end group",
       depth > 0 && isGroup && "ml-4 md:ml-8",
       isBottleneck && !isDown && "ring-2 ring-red-500 dark:ring-red-600 shadow-lg shadow-red-500/10",
       isDown && "ring-2 ring-red-600 bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-900 shadow-xl shadow-red-500/20",
@@ -349,7 +349,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
         </>
       ) : (
         <>
-          <div className="flex-1 w-full">
+          <div className="flex-1 w-full lg:min-w-72">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Component Name</label>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
@@ -592,7 +592,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
         </>
       )}
       {showNotes && !isGroup && (
-        <div className="w-full mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-1 duration-200">
+        <div className="w-full lg:basis-full pt-4 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-1 duration-200">
           <AutoExpandingTextarea
             value={item.notes || ''}
             onChange={(notes) => onUpdate(item.id, { notes })}
