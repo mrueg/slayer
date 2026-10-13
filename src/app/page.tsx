@@ -34,6 +34,19 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Parses a number input. Returns undefined for an empty or invalid field so
+ * callers can skip the update instead of silently writing 0.
+ */
+const parseNumberInput = (raw: string, parse: (value: string) => number = parseFloat): number | undefined => {
+  if (raw.trim() === '') return undefined;
+  const value = parse(raw);
+  return Number.isFinite(value) ? value : undefined;
+};
+
+const formatOptionalDuration = (minutes: number | undefined): string =>
+  minutes === undefined ? '—' : formatDuration(minutes);
+
 const CLOUD_CATALOG = [
   { provider: 'AWS', name: 'S3 (Standard)', sla: 99.9, mttr: 120, icon: 'hardDrive' },
   { provider: 'AWS', name: 'Lambda', sla: 99.95, mttr: 15, icon: 'zap' },
@@ -703,8 +716,9 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             <input
               type="number"
               min="0"
-              value={item.rto || 0}
-              onChange={(e) => onUpdate(item.id, { rto: parseInt(e.target.value) || 0 })}
+              value={item.rto ?? ''}
+              placeholder="—"
+              onChange={(e) => onUpdate(item.id, { rto: parseNumberInput(e.target.value, parseInt) })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
               title="Recovery Time Objective (Target time to restore service)"
             />
@@ -715,8 +729,9 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             <input
               type="number"
               min="0"
-              value={item.rpo || 0}
-              onChange={(e) => onUpdate(item.id, { rpo: parseInt(e.target.value) || 0 })}
+              value={item.rpo ?? ''}
+              placeholder="—"
+              onChange={(e) => onUpdate(item.id, { rpo: parseNumberInput(e.target.value, parseInt) })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
               title="Recovery Point Objective (Acceptable data loss in minutes)"
             />
@@ -1476,13 +1491,13 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                         <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step RTO</span>
                         <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
-                          {formatDuration(step.rtoResult || 0)}
+                          {formatOptionalDuration(step.rtoResult)}
                         </span>
                       </div>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                         <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step RPO</span>
                         <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
-                          {formatDuration(step.rpoResult || 0)}
+                          {formatOptionalDuration(step.rpoResult)}
                         </span>
                       </div>
                     </>
@@ -2214,15 +2229,23 @@ export default function ReliabilityModeling() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="font-bold text-slate-400 uppercase">System RTO:</span>
-                    <span className={cn("font-mono font-black", drMetrics.rto <= targetRto ? "text-emerald-600" : "text-red-600")}>
-                      {formatDuration(drMetrics.rto)} {drMetrics.rto <= targetRto ? "✓" : "!!"}
-                    </span>
+                    {drMetrics.rto === undefined ? (
+                      <span className="font-mono font-black text-slate-400" title="No component defines an RTO">not set</span>
+                    ) : (
+                      <span className={cn("font-mono font-black", drMetrics.rto <= targetRto ? "text-emerald-600" : "text-red-600")}>
+                        {formatDuration(drMetrics.rto)} {drMetrics.rto <= targetRto ? "✓" : "!!"}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="font-bold text-slate-400 uppercase">System RPO:</span>
-                    <span className={cn("font-mono font-black", drMetrics.rpo <= targetRpo ? "text-emerald-600" : "text-red-600")}>
-                      {formatDuration(drMetrics.rpo)} {drMetrics.rpo <= targetRpo ? "✓" : "!!"}
-                    </span>
+                    {drMetrics.rpo === undefined ? (
+                      <span className="font-mono font-black text-slate-400" title="No component defines an RPO">not set</span>
+                    ) : (
+                      <span className={cn("font-mono font-black", drMetrics.rpo <= targetRpo ? "text-emerald-600" : "text-red-600")}>
+                        {formatDuration(drMetrics.rpo)} {drMetrics.rpo <= targetRpo ? "✓" : "!!"}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
