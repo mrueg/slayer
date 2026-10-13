@@ -21,6 +21,7 @@ import CloudCatalogPicker from '@/app/components/CloudCatalogPicker';
 import IconPicker from '@/app/components/IconPicker';
 import AutoExpandingTextarea from '@/app/components/AutoExpandingTextarea';
 import KillModal from '@/app/components/KillModal';
+import type { ModelWarning } from '@/lib/warnings';
 
 /**
  * Parses a number input. Returns undefined for an empty or invalid field so
@@ -40,9 +41,28 @@ interface ItemNodeProps {
   depth: number;
   bottleneckIds: string[];
   chaosMode: boolean;
+  warnings?: Record<string, ModelWarning[]>;
 }
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode }) => {
+const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => {
+  if (!warnings?.length) return null;
+  const isWarning = warnings.some(w => w.severity === 'warning');
+  return (
+    <span
+      className={cn(
+        "shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 cursor-help",
+        isWarning ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+      )}
+      title={warnings.map(w => w.message).join('\n')}
+      aria-label={`${warnings.length} model check${warnings.length === 1 ? '' : 's'}: ${warnings.map(w => w.message).join(' ')}`}
+    >
+      <AlertTriangle className="w-2.5 h-2.5" />
+      {warnings.length}
+    </span>
+  );
+};
+
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
@@ -68,7 +88,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
   };
 
   return (
-    <div className={cn(
+    <div data-item-id={item.id} className={cn(
       "relative rounded-xl transition-all border",
       isGroup 
         ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm mb-4" 
@@ -124,6 +144,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               )}>
                 {formatSLAPercentage(calculateSLA(item))}%
               </span>
+              <WarningBadge warnings={warnings?.[item.id]} />
               {item.isOptional && (
                 <span className="text-[8px] font-black uppercase tracking-tighter bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-1">
                   <ShieldCheck className="w-2 h-2" />
@@ -297,6 +318,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 depth={depth + 1}
                 bottleneckIds={bottleneckIds}
                 chaosMode={chaosMode}
+                warnings={warnings}
               />
             ))}
             <div className="flex gap-2">
@@ -340,6 +362,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   item.isOptional ? "text-slate-400 dark:text-slate-600 italic line-through border-transparent" : "text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 focus:border-blue-500"
                 )}
               />
+              <WarningBadge warnings={warnings?.[item.id]} />
               <CloudCatalogPicker 
                 onSelect={(service) => onUpdate(item.id, { 
                   name: service.name, 

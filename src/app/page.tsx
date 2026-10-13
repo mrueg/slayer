@@ -59,6 +59,8 @@ import MonteCarloHistogram from '@/app/components/MonteCarloHistogram';
 import CalculationBreakdown from '@/app/components/CalculationBreakdown';
 import TopologyView from '@/app/components/TopologyView';
 import SensitivityRanking from '@/app/components/SensitivityRanking';
+import ModelChecks from '@/app/components/ModelChecks';
+import { getModelWarnings, type ModelWarning } from '@/lib/warnings';
 import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
 
 export default function ReliabilityModeling() {
@@ -297,6 +299,7 @@ export default function ReliabilityModeling() {
     downtime, 
     bottleneck, 
     sensitivityRanking,
+    modelWarnings,
     reliability, 
     calculationSteps, 
     errorBudget,
@@ -309,6 +312,7 @@ export default function ReliabilityModeling() {
       downtime: getDowntime(sla),
       bottleneck: findBottleneck(root),
       sensitivityRanking: getSensitivityRanking(root),
+      modelWarnings: getModelWarnings(root),
       reliability: calculateReliability(root),
       calculationSteps: getCalculationSteps(root),
       errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod),
@@ -323,6 +327,12 @@ export default function ReliabilityModeling() {
   useEffect(() => {
     reliabilityRef.current = reliability;
   }, [reliability]);
+
+  const warningsById = useMemo(() => {
+    const map: Record<string, ModelWarning[]> = {};
+    for (const warning of modelWarnings) (map[warning.itemId] ??= []).push(warning);
+    return map;
+  }, [modelWarnings]);
 
   const handleRunSimulation = useCallback(() => {
     setIsSimulating(true);
@@ -602,6 +612,7 @@ export default function ReliabilityModeling() {
                 depth={0} 
                 bottleneckIds={bottleneck.ids}
                 chaosMode={chaosMode}
+                warnings={warningsById}
               />
             ) : (
               <TopologyView 
@@ -675,6 +686,8 @@ export default function ReliabilityModeling() {
                 </div>
               </div>
             </section>
+
+            <ModelChecks warnings={modelWarnings} canNavigate={view === 'list'} />
 
             <SensitivityRanking ranking={sensitivityRanking} />
 
