@@ -5,6 +5,7 @@ import {
   formatDuration,
   formatSLAPercentage,
   getDowntime,
+  getDomainImpact,
   getSensitivityRanking,
   type MonteCarloResult,
   type SLAItem,
@@ -56,6 +57,7 @@ const objective = (value: number | undefined, target: number | undefined) => {
 /** Everything both renderers need, computed once. */
 const collect = (root: SLAItem, options: ReportOptions) => {
   const sla = calculateSLA(root);
+  const domainNames = new Map((root.failureDomains || []).map(d => [d.id, d.name || '(unnamed)']));
   const reliability = calculateReliability(root);
   const downtime = getDowntime(sla);
   const dr = calculateDRMetrics(root);
@@ -82,19 +84,32 @@ const collect = (root: SLAItem, options: ReportOptions) => {
       ] as [string, string][]
       : null,
     levers: getSensitivityRanking(root).slice(0, 5),
+    domains: getDomainImpact(root).map(impact => {
+      const domain = (root.failureDomains || []).find(d => d.id === impact.id)!;
+      return [
+        impact.name || '(unnamed)',
+        percent(domain.sla),
+        String(impact.itemCount),
+        impact.itemCount > 0 ? `${formatDuration(impact.downtimePerYear)}/year` : '—',
+        impact.itemCount > 0 ? percent(impact.slaWhileDown) : '—',
+      ];
+    }),
     rows: flatten(root).map(({ depth, item }) => ({
       depth,
       name: item.name || '(unnamed)',
       type: typeLabel(item),
-      sla: item.isOptional ? 'optional' : percent(calculateSLA(item)),
+      sla: item.isOptional ? 'optional' : percent(calculateSLA(item, root.failureDomains || [])),
       redundancy: redundancyLabel(item),
       mttr: item.type === 'component' ? formatDuration(item.mttr || 60) : '—',
       rto: item.type === 'component' ? optionalDuration(item.rto) : '—',
       rpo: item.type === 'component' ? optionalDuration(item.rpo) : '—',
+      domains: (item.domains || []).map(id => domainNames.get(id)).filter(Boolean).join(', '),
       notes: item.notes?.trim() || '',
     })),
   };
 };
+
+const DOMAIN_HEADERS = ['Domain', 'SLA', 'Items', 'Downtime caused', 'System SLA while down'];
 
 const markdownCell = (text: string) => text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
 
@@ -122,11 +137,17 @@ export const renderReportMarkdown = (root: SLAItem, options: ReportOptions): str
       ...data.levers.map((lever, i) => `${i + 1}. **${markdownCell(lever.name)}** — ${formatDuration(lever.downtimeSavedPerYear)}`));
   }
 
-  lines.push('', '## Architecture', '', '| Item | Type | SLA | Replicas | MTTR | RTO | RPO | Notes |', '|---|---|---|---|---|---|---|---|',
+  if (data.domains.length > 0) {
+    lines.push('', '## Failure Domains', '', 'Shared infrastructure; tagged items fail together when it fails.', '',
+      `| ${DOMAIN_HEADERS.join(' | ')} |`, `|${DOMAIN_HEADERS.map(() => '---').join('|')}|`,
+      ...data.domains.map(cells => `| ${cells.map(markdownCell).join(' | ')} |`));
+  }
+
+  lines.push('', '## Architecture', '', '| Item | Type | SLA | Replicas | MTTR | RTO | RPO | Domains | Notes |', '|---|---|---|---|---|---|---|---|---|',
     ...data.rows.map(row => {
       // Non-breaking spaces keep the indentation in rendered tables
       const indent = row.depth > 0 ? `${'\u00a0\u00a0'.repeat(row.depth - 1)}└\u00a0` : '';
-      return `| ${indent}${markdownCell(row.name)} | ${row.type} | ${row.sla} | ${row.redundancy} | ${row.mttr} | ${row.rto} | ${row.rpo} | ${markdownCell(row.notes)} |`;
+      return `| ${indent}${markdownCell(row.name)} | ${row.type} | ${row.sla} | ${row.redundancy} | ${row.mttr} | ${row.rto} | ${row.rpo} | ${markdownCell(row.domains)} | ${markdownCell(row.notes)} |`;
     }));
 
   return lines.join('\n') + '\n';
@@ -148,9 +169,14 @@ export const renderReportHtml = (root: SLAItem, options: ReportOptions): string 
     sections.push(`<h2>Improvement Levers</h2><p>Yearly downtime saved if the item never failed:</p><ol>${data.levers
       .map(lever => `<li><strong>${escapeXml(lever.name)}</strong> — ${escapeXml(formatDuration(lever.downtimeSavedPerYear))}</li>`).join('')}</ol>`);
   }
+  if (data.domains.length > 0) {
+    sections.push(`<h2>Failure Domains</h2><p>Shared infrastructure; tagged items fail together when it fails.</p><table class="items"><thead><tr>${DOMAIN_HEADERS
+      .map(h => `<th>${escapeXml(h)}</th>`).join('')}</tr></thead><tbody>${data.domains
+      .map(cells => `<tr>${cells.map(c => `<td>${escapeXml(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+  }
   sections.push(`<h2>Topology</h2><div class="diagram">${renderDiagramSvg(root)}</div>`);
-  sections.push(`<h2>Architecture</h2><table class="items"><thead><tr><th>Item</th><th>Type</th><th>SLA</th><th>Replicas</th><th>MTTR</th><th>RTO</th><th>RPO</th><th>Notes</th></tr></thead><tbody>${data.rows
-    .map(row => `<tr><td style="padding-left:${0.5 + row.depth * 1.25}rem">${escapeXml(row.name)}</td><td>${escapeXml(row.type)}</td><td class="num">${escapeXml(row.sla)}</td><td>${row.redundancy}</td><td>${escapeXml(row.mttr)}</td><td>${escapeXml(row.rto)}</td><td>${escapeXml(row.rpo)}</td><td class="notes">${escapeXml(row.notes)}</td></tr>`)
+  sections.push(`<h2>Architecture</h2><table class="items"><thead><tr><th>Item</th><th>Type</th><th>SLA</th><th>Replicas</th><th>MTTR</th><th>RTO</th><th>RPO</th><th>Domains</th><th>Notes</th></tr></thead><tbody>${data.rows
+    .map(row => `<tr><td style="padding-left:${0.5 + row.depth * 1.25}rem">${escapeXml(row.name)}</td><td>${escapeXml(row.type)}</td><td class="num">${escapeXml(row.sla)}</td><td>${row.redundancy}</td><td>${escapeXml(row.mttr)}</td><td>${escapeXml(row.rto)}</td><td>${escapeXml(row.rpo)}</td><td>${escapeXml(row.domains)}</td><td class="notes">${escapeXml(row.notes)}</td></tr>`)
     .join('')}</tbody></table>`);
 
   return `<!doctype html>
