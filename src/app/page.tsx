@@ -32,6 +32,7 @@ import {
 } from '@/lib/config';
 import TopologyView from './TopologyView';
 import KillModal from './KillModal';
+import { normalizeItem } from '@/lib/normalize';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -247,7 +248,7 @@ const IconPicker: React.FC<{ current: string | undefined, onSelect: (name: strin
 const updateItemInTree = (items: SLAItem[], id: string, updates: Partial<SLAItem>): SLAItem[] => {
   return items.map(item => {
     if (item.id === id) {
-      return { ...item, ...updates };
+      return normalizeItem({ ...item, ...updates });
     }
     if (item.children) {
       return { ...item, children: updateItemInTree(item.children, id, updates) };
@@ -457,7 +458,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                     min="1"
                     max={item.children?.length || 1}
                     value={item.minChildrenRequired || 1}
-                    onChange={(e) => onUpdate(item.id, { minChildrenRequired: parseInt(e.target.value) || 1 })}
+                    onChange={(e) => {
+                      const value = parseNumberInput(e.target.value, parseInt);
+                      if (value !== undefined) onUpdate(item.id, { minChildrenRequired: value });
+                    }}
                     className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
                   />
                 </div>
@@ -472,7 +476,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                     max="100"
                     step="0.01"
                     value={item.failoverSla ?? 100}
-                    onChange={(e) => onUpdate(item.id, { failoverSla: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const value = parseNumberInput(e.target.value);
+                      if (value !== undefined) onUpdate(item.id, { failoverSla: value });
+                    }}
                     className="w-12 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
                   />
                 </div>
@@ -485,7 +492,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   min="1"
                   max="99"
                   value={item.replicas || 1}
-                  onChange={(e) => onUpdate(item.id, { replicas: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => {
+                  const value = parseNumberInput(e.target.value, parseInt);
+                  if (value !== undefined) onUpdate(item.id, { replicas: value });
+                }}
                   className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
                 />
               </div>
@@ -498,7 +508,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                     min="1"
                     max={item.replicas || 1}
                     value={item.minReplicasRequired || 1}
-                    onChange={(e) => onUpdate(item.id, { minReplicasRequired: parseInt(e.target.value) || 1 })}
+                    onChange={(e) => {
+                    const value = parseNumberInput(e.target.value, parseInt);
+                    if (value !== undefined) onUpdate(item.id, { minReplicasRequired: value });
+                  }}
                     className="w-8 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
                   />
                 </div>
@@ -673,7 +686,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 min="0"
                 max="100"
                 value={item.sla}
-                onChange={(e) => onUpdate(item.id, { sla: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const value = parseNumberInput(e.target.value);
+                  if (value !== undefined) onUpdate(item.id, { sla: value });
+                }}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
               />
             </div>
@@ -685,7 +701,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   type="number"
                   min="0"
                   value={item.downtimeValue || 0}
-                  onChange={(e) => handleDowntimeChange(parseFloat(e.target.value) || 0, item.downtimePeriod || 'month')}
+                  onChange={(e) => {
+                    const value = parseNumberInput(e.target.value);
+                    if (value !== undefined) handleDowntimeChange(value, item.downtimePeriod || 'month');
+                  }}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                 />
               </div>
@@ -710,7 +729,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               type="number"
               min="1"
               value={item.mttr || 60}
-              onChange={(e) => onUpdate(item.id, { mttr: parseInt(e.target.value) || 1 })}
+              onChange={(e) => {
+                const value = parseNumberInput(e.target.value, parseInt);
+                if (value !== undefined) onUpdate(item.id, { mttr: value });
+              }}
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
               title="Mean Time To Recovery (average time to fix)"
             />
@@ -749,7 +771,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               min="1"
               max="99"
               value={item.replicas || 1}
-              onChange={(e) => onUpdate(item.id, { replicas: parseInt(e.target.value) || 1 })}
+              onChange={(e) => {
+                  const value = parseNumberInput(e.target.value, parseInt);
+                  if (value !== undefined) onUpdate(item.id, { replicas: value });
+                }}
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
             />
           </div>
@@ -761,7 +786,10 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 min="1"
                 max={item.replicas || 1}
                 value={item.minReplicasRequired || 1}
-                onChange={(e) => onUpdate(item.id, { minReplicasRequired: parseInt(e.target.value) || 1 })}
+                onChange={(e) => {
+                    const value = parseNumberInput(e.target.value, parseInt);
+                    if (value !== undefined) onUpdate(item.id, { minReplicasRequired: value });
+                  }}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                 title="Minimum replicas required to be healthy"
               />
@@ -1763,7 +1791,7 @@ export default function ReliabilityModeling() {
   const onUpdate = (id: string, updates: Partial<SLAItem>) => {
     setSimulationResult(null); // Reset simulation when data changes
     if (id === root.id) {
-      setRoot({ ...root, ...updates });
+      setRoot(normalizeItem({ ...root, ...updates }));
     } else {
       setRoot({ ...root, children: updateItemInTree(root.children || [], id, updates) });
     }
