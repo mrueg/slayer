@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SLAItem } from './sla-calculator';
 import {
+  clearFailures,
   decodeShareHash,
   encodeShareHash,
+  hasFailures,
 } from './config';
 
 const sample: SLAItem = {
@@ -32,6 +34,16 @@ describe('share hash', () => {
   it('decodes legacy btoa links', () => {
     const legacy = { id: 'root', name: 'Legacy', type: 'group', config: 'series', children: [] };
     expect(decodeShareHash(btoa(JSON.stringify(legacy)))).toEqual(legacy);
+  });
+});
+
+describe('clearFailures', () => {
+  it('removes failedReplicas everywhere', () => {
+    expect(hasFailures(sample)).toBe(true);
+    const cleared = clearFailures(sample);
+    expect(hasFailures(cleared)).toBe(false);
+    expect(JSON.stringify(cleared)).not.toContain('failedReplicas');
+    expect(cleared.children?.[1].children?.[0].replicas).toBe(3);
   });
 });
 

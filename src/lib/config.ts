@@ -35,3 +35,13 @@ export const decodeShareHash = (hash: string): SLAItem => {
   }
   return parsed as SLAItem;
 };
+
+/** Removes all chaos-injected failures from a tree. */
+export const clearFailures = (item: SLAItem): SLAItem => {
+  const { failedReplicas: _failed, ...rest } = item;
+  void _failed;
+  return rest.children ? { ...rest, children: rest.children.map(clearFailures) } : rest;
+};
+
+export const hasFailures = (item: SLAItem): boolean =>
+  (item.failedReplicas || 0) > 0 || (item.children || []).some(hasFailures);
