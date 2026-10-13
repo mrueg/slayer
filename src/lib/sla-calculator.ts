@@ -66,6 +66,14 @@ const calculateKofN = (probabilities: number[], k: number): number => {
   return Math.min(1, totalProbability);
 };
 
+/**
+ * Children that participate in the calculation. Optional children are
+ * excluded entirely: treating them as 100% available would make any
+ * parallel group containing one look perfect.
+ */
+const getActiveChildren = (item: SLAItem): SLAItem[] =>
+  (item.children || []).filter(child => !child.isOptional);
+
 interface ReplicaParams {
   replicas: number;
   required: number;
@@ -146,7 +154,7 @@ const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
       : 0;
     base = { availability, frequency };
   } else {
-    const childMetrics = (item.children || []).map(child => evaluate(child, overrides));
+    const childMetrics = getActiveChildren(item).map(child => evaluate(child, overrides));
     const probabilities = childMetrics.map(m => m.availability);
     const availability = combineGroup(item, probabilities);
 
@@ -199,7 +207,7 @@ export const calculateDRMetrics = (item: SLAItem): DRResult => {
     };
   }
 
-  const children = item.children || [];
+  const children = getActiveChildren(item);
   if (children.length === 0) return { rto: 0, rpo: 0 };
 
   const childMetrics = children.map(child => calculateDRMetrics(child));
@@ -248,7 +256,7 @@ const getAllItems = (item: SLAItem): SLAItem[] =>
   [item, ...(item.children || []).flatMap(getAllItems)];
 
 const getSerialMap = (item: SLAItem, parent?: SLAItem, map: Record<string, boolean> = {}): Record<string, boolean> => {
-  if (!parent || parent.config === 'series' || (parent.config === 'parallel' && (parent.children?.length || 0) <= 1)) {
+  if (!parent || parent.config === 'series' || (parent.config === 'parallel' && getActiveChildren(parent).length <= 1)) {
     map[item.id] = true;
   } else {
     map[item.id] = false;
@@ -342,8 +350,8 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
       id: item.id,
       name: item.name,
       type: item.type,
-      formula: "100%",
-      explanation: "Optional component excluded from calculation",
+      formula: "Excluded",
+      explanation: "Optional item excluded from calculation",
       inputValues: [],
       result: 100,
       mttrResult: 0,
@@ -393,13 +401,15 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
     }
   } else {
     const children = item.children || [];
-    if (children.length === 0) {
+    const activeChildren = getActiveChildren(item);
+    if (activeChildren.length === 0) {
+      children.forEach(child => steps.push(...getCalculationSteps(child)));
       steps.push({
         id: item.id,
         name: item.name,
         type: item.type,
         formula: "100%",
-        explanation: "Empty group defaults to 100%",
+        explanation: "Group without critical children defaults to 100%",
         inputValues: [],
         result: rel.sla,
         mttrResult: rel.mttr,
@@ -410,8 +420,8 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
     } else {
       children.forEach(child => steps.push(...getCalculationSteps(child)));
       
-      const childRels = children.map(child => calculateReliability(child));
-      const k = getMinChildrenRequired(item, children.length);
+      const childRels = activeChildren.map(child => calculateReliability(child));
+      const k = getMinChildrenRequired(item, activeChildren.length);
       
       if (item.config === 'series') {
         steps.push({
@@ -432,7 +442,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
           id: item.id,
           name: item.name,
           type: item.type,
-          formula: `${k}-out-of-${children.length} Redundancy`,
+          formula: `${k}-out-of-${activeChildren.length} Redundancy`,
           explanation: `Parallel: Minimum time to recover any path (Min RTO) and freshest data path (Min RPO).`,
           inputValues: childRels.map(r => `${formatSLAPercentage(r.sla)}%`),
           result: rel.sla,
