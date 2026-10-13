@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   SLAItem,
+  calculateDRMetrics,
   calculateReliability,
   calculateSLA,
+  getBlastRadiusMap,
   runMonteCarlo,
 } from './sla-calculator';
 
@@ -133,6 +135,36 @@ describe('runMonteCarlo', () => {
     const result = runMonteCarlo(rel, 99.9, 100);
     expect(result.meanDowntime).toBeCloseTo(YEAR_MINUTES, 6);
     expect(result.breachProbability).toBe(100);
+  });
+});
+
+describe('optional items', () => {
+  it('excludes an optional child from a parallel group instead of treating it as perfect', () => {
+    const root = group('root', 'parallel', [component('a', 99), component('b', 99.9, { isOptional: true })]);
+    expect(calculateSLA(root)).toBeCloseTo(99, 10);
+  });
+
+  it('does not let an optional primary bypass failover', () => {
+    const root = group('root', 'parallel', [
+      component('opt', 99, { isOptional: true }),
+      component('a', 99),
+      component('b', 99),
+    ], { failoverSla: 90 });
+    const expected = (1 - 0.01 * (0.1 + 0.9 * 0.01)) * 100;
+    expect(calculateSLA(root)).toBeCloseTo(expected, 10);
+  });
+
+  it('ignores optional children in DR metrics', () => {
+    const root = group('root', 'parallel', [
+      component('a', 99, { rto: 30, rpo: 5 }),
+      component('b', 99, { isOptional: true, rto: 1, rpo: 1 }),
+    ]);
+    expect(calculateDRMetrics(root)).toEqual({ rto: 30, rpo: 5 });
+  });
+
+  it('gives an optional item no blast radius', () => {
+    const root = group('root', 'series', [component('a', 99), component('b', 99, { isOptional: true })]);
+    expect(getBlastRadiusMap(root).b).toBe(0);
   });
 });
 
