@@ -25,6 +25,10 @@ import {
   getBlastRadiusMap,
   calculateDRMetrics
 } from '@/lib/sla-calculator';
+import {
+  decodeShareHash,
+  encodeShareHash
+} from '@/lib/config';
 import TopologyView from './TopologyView';
 import KillModal from './KillModal';
 import { clsx, type ClassValue } from 'clsx';
@@ -1621,12 +1625,10 @@ export default function ReliabilityModeling() {
     const hash = window.location.hash.replace('#', '');
     if (hash) {
       try {
-        const decoded = JSON.parse(atob(hash));
-        if (decoded && decoded.id) {
-          setTimeout(() => setRoot(decoded), 0);
-        }
-      } catch {
-        console.error('Failed to decode configuration from URL');
+        const decoded = decodeShareHash(hash);
+        setTimeout(() => setRoot(decoded), 0);
+      } catch (err) {
+        console.error('Failed to decode configuration from URL', err);
       }
     }
   }, []);
@@ -1650,7 +1652,7 @@ export default function ReliabilityModeling() {
 
   const handleShare = () => {
     try {
-      const encoded = btoa(JSON.stringify(root));
+      const encoded = encodeShareHash(root);
       const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
       navigator.clipboard.writeText(url);
       window.location.hash = encoded;
