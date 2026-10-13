@@ -51,6 +51,9 @@ import { loadSavedModel, saveModel } from '@/lib/autosave';
 import { normalizeItem } from '@/lib/normalize';
 import { updateItemInTree, removeItemFromTree, addChildToGroup } from '@/lib/tree';
 import { cn } from '@/lib/cn';
+import { renderDiagramSvg } from '@/lib/diagram';
+import { renderReportHtml, renderReportMarkdown } from '@/lib/report';
+import { downloadBlob, exportFilename, printHtml, svgToPngBlob } from '@/app/download';
 import { isDarkMode, setDarkMode, watchTheme } from '@/lib/theme';
 import { TEMPLATES } from '@/app/templates';
 import ItemNode from '@/app/components/ItemNode';
@@ -141,6 +144,7 @@ export default function ReliabilityModeling() {
   const [chaosMode, setChaosMode] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showHistogram, setShowHistogram] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
@@ -155,6 +159,7 @@ export default function ReliabilityModeling() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   // Restore on mount: a shared link wins over the autosaved model
   useEffect(() => {
@@ -218,6 +223,9 @@ export default function ReliabilityModeling() {
       if (templateRef.current && !templateRef.current.contains(event.target as Node)) {
         setShowTemplates(false);
       }
+      if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -261,16 +269,33 @@ export default function ReliabilityModeling() {
     }
   };
 
-  const handleExport = () => {
-    const data = JSON.stringify(root, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `slayer-config-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExport = async (format: 'json' | 'markdown' | 'pdf' | 'svg' | 'png') => {
+    setShowExportMenu(false);
+    const reportOptions = { generatedAt: new Date(), targetRto, targetRpo, simulation: simulationResult };
+    try {
+      switch (format) {
+        case 'json':
+          downloadBlob(new Blob([JSON.stringify(root, null, 2)], { type: 'application/json' }), exportFilename(root.name, 'json'));
+          break;
+        case 'markdown':
+          downloadBlob(new Blob([renderReportMarkdown(root, reportOptions)], { type: 'text/markdown' }), exportFilename(root.name, 'md'));
+          break;
+        case 'pdf':
+          printHtml(renderReportHtml(root, reportOptions));
+          break;
+        case 'svg':
+          downloadBlob(new Blob([renderDiagramSvg(root)], { type: 'image/svg+xml' }), exportFilename(root.name, 'svg'));
+          break;
+        case 'png':
+          downloadBlob(await svgToPngBlob(renderDiagramSvg(root)), exportFilename(root.name, 'png'));
+          break;
+      }
+    } catch (err) {
+      console.error('Export failed', err);
+      alert('Export failed. See the browser console for details.');
+    }
   };
+
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -548,14 +573,43 @@ export default function ReliabilityModeling() {
                 <Upload className="w-4 h-4" />
                 <span className="hidden xl:inline">Import</span>
               </button>
-              <button 
-                onClick={handleExport}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-                title="Export configuration to JSON"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden xl:inline">Export</span>
-              </button>
+              <div className="relative" ref={exportRef}>
+                <button 
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                  title="Export the model, a report or a diagram"
+                  aria-haspopup="menu"
+                  aria-expanded={showExportMenu}
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden xl:inline">Export</span>
+                  <ChevronDown className={cn("w-3 h-3 transition-transform", showExportMenu && "rotate-180")} />
+                </button>
+
+                {showExportMenu && (
+                  <div role="menu" className="absolute top-full mt-2 right-0 w-60 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {([
+                      ['Model', [['json', 'Configuration (JSON)']]],
+                      ['Report', [['markdown', 'Markdown (.md)'], ['pdf', 'PDF (print dialog)']]],
+                      ['Diagram', [['svg', 'SVG image'], ['png', 'PNG image']]],
+                    ] as const).map(([heading, options]) => (
+                      <div key={heading}>
+                        <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{heading}</div>
+                        {options.map(([format, label]) => (
+                          <button
+                            key={format}
+                            role="menuitem"
+                            onClick={() => handleExport(format)}
+                            className="w-full text-left px-4 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
