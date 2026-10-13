@@ -303,5 +303,76 @@ export const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
         }
       ]
     }
+  },
+  concert: {
+    name: "Metal Concert (non-IT example)",
+    data: {
+      id: 'root',
+      name: "Reign in Uptime: Tonight's Show",
+      type: 'group',
+      config: 'series',
+      notes: "A non-IT example: can tonight's show go on? Try chaos mode on a guitarist, then check Improvement Levers, Failure Domains and Model Checks.",
+      failureDomains: [
+        { id: 'catering', name: 'Catering (bad shrimp)', sla: 99.5, mttr: 720 },
+        { id: 'grid', name: 'Venue grid', sla: 99.95, mttr: 45 },
+      ],
+      children: [
+        {
+          id: 'band',
+          name: 'The Band',
+          type: 'group',
+          config: 'series',
+          children: [
+            { id: 'vocals', name: 'Vocals & Bass', type: 'component', icon: 'messageSquare', sla: 99.7, mttr: 1440, rto: 1440, domains: ['catering'], notes: 'Losing the voice ends the show. Recovery: a day of tea and silence.' },
+            {
+              id: 'guitars',
+              name: 'Guitars',
+              type: 'group',
+              config: 'parallel',
+              failoverSla: 95,
+              notes: "One guitarist can carry the show, if they know the other one's solos. Unless they both had the shrimp.",
+              children: [
+                { id: 'guitar-a', name: 'Guitarist A', type: 'component', sla: 99, mttr: 720, domains: ['catering'] },
+                { id: 'guitar-b', name: 'Guitarist B', type: 'component', sla: 99, mttr: 720, domains: ['catering'] },
+              ]
+            },
+            { id: 'drums', name: 'Drums', type: 'component', icon: 'activity', sla: 99.5, mttr: 2880, domains: ['catering'], notes: 'No backup drummer. Spontaneous combustion is a known risk.' },
+          ]
+        },
+        {
+          id: 'gear',
+          name: 'Gear',
+          type: 'group',
+          config: 'series',
+          children: [
+            { id: 'amps', name: 'Amp Stacks', type: 'component', icon: 'zap', sla: 99, replicas: 4, minReplicasRequired: 2, mttr: 30, domains: ['grid'], notes: 'Wall of four, two are enough to be heard in the next town.' },
+            { id: 'strings', name: 'Guitar Strings', type: 'component', icon: 'settings', sla: 99.9, replicas: 6, minReplicasRequired: 6, mttr: 2, notes: 'All six have to hold. Model Checks will tell you why that hurts.' },
+            { id: 'pa', name: 'PA System', type: 'component', icon: 'monitor', sla: 99.9, mttr: 60, domains: ['grid'] },
+          ]
+        },
+        {
+          id: 'travel',
+          name: 'Getting There',
+          type: 'group',
+          config: 'parallel',
+          failoverSla: 90,
+          children: [
+            { id: 'bus', name: 'Tour Bus', type: 'component', icon: 'box', sla: 98, mttr: 360 },
+            { id: 'van', name: 'Rental Van', type: 'component', icon: 'box', sla: 95, mttr: 120, notes: 'Plan B. Smells of energy drinks.' },
+          ]
+        },
+        {
+          id: 'venue',
+          name: 'Venue',
+          type: 'group',
+          config: 'series',
+          children: [
+            { id: 'marshal', name: 'Fire Marshal Sign-off', type: 'component', icon: 'shield', sla: 99.9, mttr: 120 },
+          ]
+        },
+        { id: 'pyro', name: 'Pyrotechnics', type: 'component', icon: 'zap', sla: 97, isOptional: true, domains: ['grid'], notes: 'Nice to have. The fire marshal disagrees.' },
+        { id: 'encore', name: 'Encore', type: 'component', sla: 90, isOptional: true, notes: 'Depends entirely on the crowd.' },
+      ]
+    }
   }
 };
