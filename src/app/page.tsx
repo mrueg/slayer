@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Calculator,
   RefreshCcw,
@@ -46,7 +46,7 @@ import { generateId } from '@/lib/id';
 import { normalizeItem } from '@/lib/normalize';
 import { updateItemInTree, removeItemFromTree, addChildToGroup } from '@/lib/tree';
 import { cn } from '@/lib/cn';
-import { isDarkMode, setDarkMode, subscribeToTheme } from '@/lib/theme';
+import { isDarkMode, setDarkMode, watchTheme } from '@/lib/theme';
 import { TEMPLATES } from '@/app/templates';
 import ItemNode from '@/app/components/ItemNode';
 import HelpModal from '@/app/components/HelpModal';
@@ -123,8 +123,7 @@ export default function ReliabilityModeling() {
   const [root, setRoot] = useState<SLAItem>(defaultSystem);
   const [view, setView] = useState<'list' | 'topology'>('list');
   const [topologyLayout, setTopologyLayout] = useState<'horizontal' | 'vertical'>('vertical');
-  // The server render can't know the theme; the client reads it from <html> after hydration
-  const darkMode = useSyncExternalStore(subscribeToTheme, isDarkMode, () => false);
+  useEffect(() => watchTheme(), []);
   const [chaosMode, setChaosMode] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -504,11 +503,14 @@ export default function ReliabilityModeling() {
             </button>
 
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => setDarkMode(!isDarkMode())}
               className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              title="Toggle dark mode"
+              aria-label="Toggle dark mode"
             >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {/* Chosen by CSS so the pre-rendered HTML is right before hydration */}
+              <Sun className="w-5 h-5 hidden dark:block" />
+              <Moon className="w-5 h-5 dark:hidden" />
             </button>
           </div>
         </header>
