@@ -1,3 +1,5 @@
+import { clamp } from './number';
+
 export type Configuration = 'series' | 'parallel';
 export type InputMode = 'percentage' | 'downtime';
 export type DowntimePeriod = 'day' | 'month' | 'year';
@@ -50,7 +52,6 @@ export interface CalculationResult {
 
 const YEAR_MINUTES = 365.25 * 24 * 60;
 
-const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
 /**
  * Calculates the probability that at least k items out of n are UP.

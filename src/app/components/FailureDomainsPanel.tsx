@@ -4,6 +4,7 @@ import React from 'react';
 import { MapPinned, Plus, Trash2 } from 'lucide-react';
 import { DomainImpact, FailureDomain, formatDuration, formatSLAPercentage, getDomainMttr } from '@/lib/sla-calculator';
 import { MAX_FAILURE_DOMAINS } from '@/lib/domains';
+import { parseNumberInput } from '@/lib/number';
 
 interface FailureDomainsPanelProps {
   domains: FailureDomain[];
@@ -58,8 +59,8 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
                     type="number" min="0" max="100" step="0.001"
                     value={domain.sla}
                     onChange={(e) => {
-                      const value = parseFloat(e.target.value);
-                      if (Number.isFinite(value)) onUpdate(domain.id, { sla: Math.min(100, Math.max(0, value)) });
+                      const value = parseNumberInput(e.target.value);
+                      if (value !== undefined) onUpdate(domain.id, { sla: value });
                     }}
                     className={inputClass}
                   />
@@ -70,8 +71,8 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
                     type="number" min="1"
                     value={getDomainMttr(domain)}
                     onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      if (Number.isFinite(value)) onUpdate(domain.id, { mttr: Math.max(1, value) });
+                      const value = parseNumberInput(e.target.value, parseInt);
+                      if (value !== undefined) onUpdate(domain.id, { mttr: value });
                     }}
                     className={inputClass}
                   />

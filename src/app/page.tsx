@@ -50,9 +50,9 @@ import { ConfigError, clearFailures, decodeShareHash, encodeShareHash, parseConf
 import { generateId } from '@/lib/id';
 import { createHistory, historyReducer } from '@/lib/history';
 import { loadSavedModel, saveModel } from '@/lib/autosave';
-import { normalizeItem } from '@/lib/normalize';
-import { updateItemInTree, removeItemFromTree, addChildToGroup, removeDomainReferences } from '@/lib/tree';
-import { MAX_FAILURE_DOMAINS, nextDomainName } from '@/lib/domains';
+import { normalizeDomain, normalizeItem } from '@/lib/normalize';
+import { updateItemInTree, removeItemFromTree, addChildToGroup } from '@/lib/tree';
+import { MAX_FAILURE_DOMAINS, filterDomainTags, nextDomainName } from '@/lib/domains';
 import { cn } from '@/lib/cn';
 import { renderDiagramSvg } from '@/lib/diagram';
 import { renderReportHtml, renderReportMarkdown } from '@/lib/report';
@@ -409,13 +409,13 @@ export default function ReliabilityModeling() {
 
   const handleUpdateDomain = (id: string, updates: Partial<FailureDomain>) => {
     setSimulationResult(null);
-    setRoot({ ...root, failureDomains: failureDomains.map(d => (d.id === id ? { ...d, ...updates } : d)) }, `domain:${id}:${Object.keys(updates).sort().join(',')}`);
+    setRoot({ ...root, failureDomains: failureDomains.map(d => (d.id === id ? normalizeDomain({ ...d, ...updates }) : d)) }, `domain:${id}:${Object.keys(updates).sort().join(',')}`);
   };
 
   const handleRemoveDomain = (id: string) => {
     setSimulationResult(null);
     const remaining = failureDomains.filter(d => d.id !== id);
-    const untagged = removeDomainReferences(root, id);
+    const untagged = filterDomainTags(root, domainId => domainId !== id);
     setRoot({ ...untagged, failureDomains: remaining.length > 0 ? remaining : undefined });
   };
 

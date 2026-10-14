@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeItem } from './normalize';
+import { normalizeDomain, normalizeItem } from './normalize';
 
 describe('normalizeItem', () => {
   it('clamps percentages', () => {
@@ -22,5 +22,13 @@ describe('normalizeItem', () => {
   it('keeps replicas within 1-99', () => {
     expect(normalizeItem({ id: 'a', name: 'a', type: 'component', replicas: 0 }).replicas).toBe(1);
     expect(normalizeItem({ id: 'a', name: 'a', type: 'component', replicas: 500 }).replicas).toBe(99);
+  });
+});
+
+describe('normalizeDomain', () => {
+  it('clamps the SLA and keeps the MTTR a whole number of at least 1 minute', () => {
+    expect(normalizeDomain({ id: 'z', name: 'z', sla: 120, mttr: 0.4 })).toEqual({ id: 'z', name: 'z', sla: 100, mttr: 1 });
+    expect(normalizeDomain({ id: 'z', name: 'z', sla: -1, mttr: 90.7 })).toEqual({ id: 'z', name: 'z', sla: 0, mttr: 90 });
+    expect(normalizeDomain({ id: 'z', name: 'z', sla: 99.9 })).toEqual({ id: 'z', name: 'z', sla: 99.9 });
   });
 });

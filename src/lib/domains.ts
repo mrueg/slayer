@@ -1,4 +1,4 @@
-import type { FailureDomain } from './sla-calculator';
+import type { FailureDomain, SLAItem } from './sla-calculator';
 
 /**
  * Domains shared across branches are evaluated for every combination of up
@@ -12,4 +12,16 @@ export const nextDomainName = (domains: FailureDomain[], prefix = 'Zone'): strin
   let n = 1;
   while (taken.has(`${prefix} ${n}`.toLowerCase())) n++;
   return `${prefix} ${n}`;
+};
+
+/** Copies the tree, keeping only the domain tags that pass the filter. */
+export const filterDomainTags = (item: SLAItem, keep: (domainId: string) => boolean): SLAItem => {
+  const next = { ...item };
+  if (next.domains) {
+    const kept = next.domains.filter(keep);
+    if (kept.length > 0) next.domains = kept;
+    else delete next.domains;
+  }
+  if (next.children) next.children = next.children.map(child => filterDomainTags(child, keep));
+  return next;
 };
