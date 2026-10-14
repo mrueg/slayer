@@ -44,6 +44,7 @@ import {
   calculateReliability,
   MonteCarloResult,
   getBlastRadiusMap,
+  getItemSLAs,
   calculateDRMetrics
 } from '@/lib/sla-calculator';
 import { ConfigError, clearFailures, decodeShareHash, encodeShareHash, parseConfig } from '@/lib/config';
@@ -337,6 +338,7 @@ export default function ReliabilityModeling() {
     calculationSteps, 
     errorBudget,
     blastRadiusMap,
+    itemSlas,
     drMetrics
   } = useMemo(() => {
     const sla = calculateSLA(root);
@@ -351,6 +353,7 @@ export default function ReliabilityModeling() {
       calculationSteps: getCalculationSteps(root),
       errorBudget: calculateErrorBudget(sla, consumedDowntime, budgetPeriod),
       blastRadiusMap: getBlastRadiusMap(root),
+      itemSlas: getItemSLAs(root),
       drMetrics: calculateDRMetrics(root)
     };
   }, [root, consumedDowntime, budgetPeriod]);
@@ -698,6 +701,7 @@ export default function ReliabilityModeling() {
                 chaosMode={chaosMode}
                 warnings={warningsById}
                 failureDomains={failureDomains}
+                itemSlas={itemSlas}
               />
             ) : (
               <TopologyView 
@@ -707,6 +711,7 @@ export default function ReliabilityModeling() {
                 chaosMode={chaosMode}
                 onUpdate={onUpdate}
                 blastRadiusMap={blastRadiusMap}
+                itemSlas={itemSlas}
               />
             )}
           </div>

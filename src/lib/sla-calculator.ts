@@ -383,6 +383,15 @@ const evaluateSystem = (root: SLAItem, overrides: Overrides = {}, domains = root
 export const calculateSLA = (item: SLAItem, domains?: FailureDomain[]): number =>
   evaluateSystem(item, {}, domains).availability * 100;
 
+/**
+ * SLA in percent of every item in the model, keyed by id, with the root's
+ * failure domains applied. Computed once per model so views can look it up.
+ */
+export const getItemSLAs = (root: SLAItem): Record<string, number> => {
+  const domains = root.failureDomains || [];
+  return Object.fromEntries(getAllItems(root).map(item => [item.id, evaluateSystem(item, {}, domains).availability * 100]));
+};
+
 export interface ReliabilityResult {
   sla: number;
   frequency: number; // incidents per year

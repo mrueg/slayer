@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SLAItem, FailureDomain, calculateSLA, formatSLAPercentage } from '@/lib/sla-calculator';
+import { SLAItem, FailureDomain, formatSLAPercentage } from '@/lib/sla-calculator';
 import { MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Skull, Flame } from 'lucide-react';
 import KillModal from './KillModal';
 import { cn } from '@/lib/cn';
@@ -14,6 +14,7 @@ interface TopologyViewProps {
   chaosMode: boolean;
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
   blastRadiusMap: Record<string, number>;
+  itemSlas: Record<string, number>;
 }
 
 const TopologyNode: React.FC<{ 
@@ -25,6 +26,7 @@ const TopologyNode: React.FC<{
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
   blastRadiusMap: Record<string, number>;
   failureDomains: FailureDomain[];
+  itemSlas: Record<string, number>;
 }> = ({ 
   item, 
   depth,
@@ -33,10 +35,11 @@ const TopologyNode: React.FC<{
   chaosMode,
   onUpdate,
   blastRadiusMap,
-  failureDomains
+  failureDomains,
+  itemSlas
 }) => {
   const isGroup = item.type === 'group';
-  const sla = calculateSLA(item, failureDomains);
+  const sla = itemSlas[item.id];
   const isBottleneck = bottleneckIds.includes(item.id);
   const isOptional = item.isOptional;
   const isVertical = layout === 'vertical';
@@ -337,6 +340,7 @@ const TopologyNode: React.FC<{
               onUpdate={onUpdate}
               blastRadiusMap={blastRadiusMap}
               failureDomains={failureDomains}
+              itemSlas={itemSlas}
             />
           ))}
         </div>
@@ -345,7 +349,7 @@ const TopologyNode: React.FC<{
   );
 };
 
-export default function TopologyView({ root, bottleneckIds, layout, chaosMode, onUpdate, blastRadiusMap }: TopologyViewProps) {
+export default function TopologyView({ root, bottleneckIds, layout, chaosMode, onUpdate, blastRadiusMap, itemSlas }: TopologyViewProps) {
   return (
     <div className={cn(
       "w-full overflow-auto rounded-3xl border shadow-inner min-h-[600px] relative group/canvas transition-colors duration-700",
@@ -370,6 +374,7 @@ export default function TopologyView({ root, bottleneckIds, layout, chaosMode, o
           onUpdate={onUpdate}
           blastRadiusMap={blastRadiusMap}
           failureDomains={root.failureDomains || []}
+          itemSlas={itemSlas}
         />
       </div>
       
