@@ -1,4 +1,4 @@
-import type { SLAItem } from './sla-calculator';
+import { formatDuration, type SLAItem } from './sla-calculator';
 
 export interface ModelWarning {
   itemId: string;
@@ -75,6 +75,10 @@ export const getModelWarnings = (root: SLAItem): ModelWarning[] => {
             if (own.has(domain) || !domainNames.has(domain)) continue;
             add('warning', `A failure of ${domainNames.get(domain)} takes down this whole group: its redundant paths share that domain.`);
           }
+        }
+        const primaryMttr = children[0].type === 'component' ? (children[0].mttr || 60) : undefined;
+        if (k === 1 && children.length > 1 && item.failoverTime && primaryMttr !== undefined && item.failoverTime >= primaryMttr) {
+          add('warning', `Failing over (${formatDuration(item.failoverTime)}) takes at least as long as repairing the primary (${formatDuration(primaryMttr)}), so the standby never shortens an outage.`);
         }
         if (k === 1 && children.length > 1 && (item.failoverSla ?? 100) < 100) {
           const primary = children[0];

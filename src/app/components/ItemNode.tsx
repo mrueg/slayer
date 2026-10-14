@@ -230,6 +230,24 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 </div>
               )}
 
+              {item.config === 'parallel' && (item.children?.length || 0) > 1 && (item.minChildrenRequired || 1) === 1 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Downtime per successful failover to a standby (detection + switchover), in minutes">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Switch min</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={item.failoverTime ?? 0}
+                    onChange={(e) => {
+                      const value = parseNumberInput(e.target.value);
+                      if (value !== undefined) onUpdate(item.id, { failoverTime: value });
+                    }}
+                    className="w-10 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                    aria-label="Failover switchover time (minutes)"
+                  />
+                </div>
+              )}
+
               <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Replicas</span>
                 <input

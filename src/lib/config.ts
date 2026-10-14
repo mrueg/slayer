@@ -7,6 +7,7 @@ export class ConfigError extends Error {}
 const RANGES: Partial<Record<keyof SLAItem, [number, number]>> = {
   sla: [0, 100],
   failoverSla: [0, 100],
+  failoverTime: [0, Infinity],
   mttr: [0, Infinity],
   rto: [0, Infinity],
   rpo: [0, Infinity],
@@ -109,6 +110,7 @@ export const parseConfig = (input: unknown): SLAItem => {
     const numericKeys = [
       'commonCause',
       'mttr', 'sla', 'replicas', 'minReplicasRequired', 'minChildrenRequired',
+      'failoverTime',
       'failoverSla', 'failedReplicas', 'downtimeValue', 'rto', 'rpo',
     ] as const;
     for (const key of numericKeys) {
