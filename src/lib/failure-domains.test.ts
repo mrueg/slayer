@@ -7,7 +7,6 @@ import {
   getBlastRadiusMap,
   getCalculationSteps,
   getDomainImpact,
-  runMonteCarlo,
 } from './sla-calculator';
 import { parseConfig } from './config';
 
@@ -55,34 +54,47 @@ describe('failure domains', () => {
     expect(calculateSLA(tagged)).toBeCloseTo(0.9995 * (1 - 0.001 ** 2) * 100, 10);
   });
 
-  it('keeps frequency × MTTR consistent with the SLA', () => {
-    const root = group('root', 'series', [
-      group('web', 'parallel', [
-        component('w1', 99.5, { domains: ['az1'], mttr: 30 }),
-        component('w2', 99.5, { domains: ['az2'], mttr: 30 }),
-      ]),
-      component('db', 99.95, { domains: ['az1', 'region'] }),
-    ], { failureDomains: [zone('az1', 99.9, 60), zone('az2', 99.9, 60), zone('region', 99.99, 240)] });
-    const rel = calculateReliability(root);
-    expect(rel.sla).toBeCloseTo(calculateSLA(root), 10);
-    expect(rel.frequency * rel.mttr).toBeCloseTo((1 - rel.sla / 100) * YEAR_MINUTES, 6);
+  it('derives the failure frequency by hand for redundancy in one zone and across zones', () => {
+    const p = 0.995;
+    const zoneAvailability = 0.999;
+    const componentFrequency = ((1 - p) * YEAR_MINUTES) / 30;
+    const zoneFrequency = ((1 - zoneAvailability) * YEAR_MINUTES) / 60;
+    const domains = [zone('az1', 99.9, 60), zone('az2', 99.9, 60)];
+
+    // One zone: A = A_z (1 - (1 - p)^2); Birnbaum over the zone and both components
+    const sameZone = group('root', 'parallel', [
+      component('a', 99.5, { domains: ['az1'], mttr: 30 }), component('b', 99.5, { domains: ['az1'], mttr: 30 }),
+    ], { failureDomains: domains });
+    const sameExpected = zoneFrequency * (1 - (1 - p) ** 2) + 2 * componentFrequency * zoneAvailability * (1 - p);
+    expect(calculateReliability(sameZone).frequency).toBeCloseTo(sameExpected, 10);
+
+    // Two zones: each path is up with A_z p; A = 1 - (1 - A_z p)^2
+    const spread = group('root', 'parallel', [
+      component('a', 99.5, { domains: ['az1'], mttr: 30 }), component('b', 99.5, { domains: ['az2'], mttr: 30 }),
+    ], { failureDomains: domains });
+    const pathDown = 1 - zoneAvailability * p;
+    const spreadExpected = 2 * componentFrequency * zoneAvailability * pathDown + 2 * zoneFrequency * p * pathDown;
+    expect(calculateReliability(spread).frequency).toBeCloseTo(spreadExpected, 10);
   });
 
-  it('feeds the Monte Carlo simulation', () => {
-    const root = group('root', 'parallel', [
-      component('a', 99, { domains: ['az1'] }), component('b', 99, { domains: ['az1'] }),
-    ], { failureDomains: [zone('az1', 99, 60)] });
-    const result = runMonteCarlo(calculateReliability(root), 99.9, 20000, 7);
-    const expected = (1 - calculateSLA(root) / 100) * YEAR_MINUTES;
-    expect(result.meanDowntime).toBeGreaterThan(expected * 0.95);
-    expect(result.meanDowntime).toBeLessThan(expected * 1.05);
+  it('counts a domain failure once, not once per tagged item', () => {
+    const root = group('root', 'series', [
+      component('a', 100, { domains: ['az1'] }), component('b', 100, { domains: ['az1'] }), component('c', 100, { domains: ['az1'] }),
+    ], { failureDomains: [zone('az1', 99.9, 60)] });
+    const rel = calculateReliability(root);
+    expect(rel.frequency).toBeCloseTo((0.001 * YEAR_MINUTES) / 60, 10);
+    expect(rel.mttr).toBeCloseTo(60, 8);
   });
 
   it('shows up in the blast radius of the shared item and the calculation steps', () => {
     const root = group('root', 'parallel', [
       component('a', 99.9, { domains: ['az1'] }), component('b', 99.9, { domains: ['az1'] }),
     ], { failureDomains: [zone('az1', 99.9)] });
-    expect(getBlastRadiusMap(root).a).toBeGreaterThanOrEqual(0);
+    // Losing a leaves the system up only if the zone and b are up
+    const p = 0.999;
+    const zoneAvailability = 0.999;
+    const availability = zoneAvailability * (1 - (1 - p) ** 2);
+    expect(getBlastRadiusMap(root).a).toBeCloseTo((availability - zoneAvailability * p) / availability, 12);
     const steps = getCalculationSteps(root);
     const last = steps[steps.length - 1];
     expect(last.name).toBe('Shared failure domains');
