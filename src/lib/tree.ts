@@ -36,15 +36,3 @@ export const addChildToGroup = (items: SLAItem[], groupId: string, newItem: SLAI
     return item;
   });
 };
-
-/** Removes a failure domain from every item that references it. */
-export const removeDomainReferences = (item: SLAItem, domainId: string): SLAItem => {
-  const next = { ...item };
-  if (next.domains?.includes(domainId)) {
-    const kept = next.domains.filter(d => d !== domainId);
-    if (kept.length > 0) next.domains = kept;
-    else delete next.domains;
-  }
-  if (next.children) next.children = next.children.map(child => removeDomainReferences(child, domainId));
-  return next;
-};

@@ -1,8 +1,14 @@
-import type { SLAItem } from './sla-calculator';
+import type { FailureDomain, SLAItem } from './sla-calculator';
+import { clamp } from './number';
 
 const MAX_REPLICAS = 99;
 
-const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
+/** Clamps a failure domain's SLA to 0-100 and its MTTR to whole minutes of at least 1. */
+export const normalizeDomain = (domain: FailureDomain): FailureDomain => {
+  const next: FailureDomain = { ...domain, sla: clamp(domain.sla, 0, 100) };
+  if (next.mttr !== undefined) next.mttr = Math.max(1, Math.floor(next.mttr));
+  return next;
+};
 
 /**
  * Clamps numeric fields of an item into valid ranges and keeps dependent

@@ -23,16 +23,7 @@ import AutoExpandingTextarea from '@/app/components/AutoExpandingTextarea';
 import KillModal from '@/app/components/KillModal';
 import type { ModelWarning } from '@/lib/warnings';
 import DomainPicker, { DomainChips } from '@/app/components/DomainPicker';
-
-/**
- * Parses a number input. Returns undefined for an empty or invalid field so
- * callers can skip the update instead of silently writing 0.
- */
-const parseNumberInput = (raw: string, parse: (value: string) => number = parseFloat): number | undefined => {
-  if (raw.trim() === '') return undefined;
-  const value = parse(raw);
-  return Number.isFinite(value) ? value : undefined;
-};
+import { parseNumberInput } from '@/lib/number';
 
 interface ItemNodeProps {
   item: SLAItem;

@@ -1,5 +1,5 @@
 import type { DowntimePeriod, FailureDomain, InputMode, SLAItem } from './sla-calculator';
-import { MAX_FAILURE_DOMAINS } from './domains';
+import { MAX_FAILURE_DOMAINS, filterDomainTags } from './domains';
 
 const MAX_DEPTH = 64;
 
@@ -149,16 +149,7 @@ export const parseConfig = (input: unknown): SLAItem => {
   const root = parseItem(input, 'root', 0);
   // Drop references to domains that are not defined
   const defined = new Set((root.failureDomains || []).map(d => d.id));
-  const pruneDomains = (item: SLAItem) => {
-    if (item.domains) {
-      const kept = item.domains.filter(d => defined.has(d));
-      if (kept.length > 0) item.domains = kept;
-      else delete item.domains;
-    }
-    item.children?.forEach(pruneDomains);
-  };
-  pruneDomains(root);
-  return root;
+  return filterDomainTags(root, id => defined.has(id));
 };
 
 const bytesToBase64Url = (bytes: Uint8Array): string => {
