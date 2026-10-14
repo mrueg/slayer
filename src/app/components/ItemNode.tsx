@@ -14,7 +14,7 @@ import {
   StickyNote,
   Skull
 } from 'lucide-react';
-import { SLAItem, FailureDomain, calculateSLA, slaFromDowntime, formatSLAPercentage, DowntimePeriod, InputMode } from '@/lib/sla-calculator';
+import { SLAItem, FailureDomain, slaFromDowntime, formatSLAPercentage, DowntimePeriod, InputMode } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
 import { getIcon } from '@/app/icons';
 import CloudCatalogPicker from '@/app/components/CloudCatalogPicker';
@@ -35,6 +35,7 @@ interface ItemNodeProps {
   chaosMode: boolean;
   warnings?: Record<string, ModelWarning[]>;
   failureDomains?: FailureDomain[];
+  itemSlas: Record<string, number>;
 }
 
 const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => {
@@ -55,7 +56,7 @@ const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => 
   );
 };
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [] }) => {
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [], itemSlas }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
@@ -135,7 +136,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 "text-xs font-mono px-2 py-0.5 rounded-full transition-colors",
                 item.isOptional ? "bg-slate-200 dark:bg-slate-800 text-slate-500" : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
               )}>
-                {formatSLAPercentage(calculateSLA(item, failureDomains))}%
+                {formatSLAPercentage(itemSlas[item.id])}%
               </span>
               <WarningBadge warnings={warnings?.[item.id]} />
               <DomainPicker
@@ -354,6 +355,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 chaosMode={chaosMode}
                 warnings={warnings}
                 failureDomains={failureDomains}
+                itemSlas={itemSlas}
               />
             ))}
             <div className="flex gap-2">
