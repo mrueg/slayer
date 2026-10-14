@@ -8,6 +8,7 @@ import {
   formatDuration,
   formatSLAPercentage,
   getSensitivityRanking,
+  incidentFreeProbability,
   getBlastRadiusMap,
   runMonteCarlo,
 } from './sla-calculator';
@@ -283,5 +284,30 @@ describe('getSensitivityRanking', () => {
       component('perfect', 100),
     ]);
     expect(getSensitivityRanking(root).map(e => e.id)).toEqual(['a']);
+  });
+});
+
+describe('incidentFreeProbability', () => {
+  it('follows R(t) = exp(-λt) with the failure rate while up', () => {
+    const rel = { sla: 99.9, frequency: 12, mttr: 0 };
+    const ratePerMinuteUp = 12 / 0.999 / YEAR_MINUTES;
+    expect(incidentFreeProbability(rel, 7 * 24 * 60)).toBeCloseTo(Math.exp(-ratePerMinuteUp * 7 * 24 * 60), 12);
+    // ~12 incidents a year: a clean month is unlikely, a clean year almost impossible
+    expect(incidentFreeProbability(rel, 30.44 * 24 * 60)).toBeLessThan(0.4);
+    expect(incidentFreeProbability(rel, YEAR_MINUTES)).toBeLessThan(1e-5);
+  });
+
+  it('handles perfect and failed systems and empty windows', () => {
+    expect(incidentFreeProbability({ sla: 100, frequency: 0, mttr: 0 }, YEAR_MINUTES)).toBe(1);
+    expect(incidentFreeProbability({ sla: 0, frequency: 0, mttr: 0 }, 60)).toBe(0);
+    expect(incidentFreeProbability({ sla: 99, frequency: 5, mttr: 60 }, 0)).toBe(1);
+  });
+
+  it('decreases with the window length', () => {
+    const rel = calculateReliability(group('root', 'series', [component('a', 99.9), component('b', 99.5, { mttr: 30 })]));
+    const day = incidentFreeProbability(rel, 24 * 60);
+    const week = incidentFreeProbability(rel, 7 * 24 * 60);
+    expect(week).toBeLessThan(day);
+    expect(week).toBeCloseTo(day ** 7, 10);
   });
 });

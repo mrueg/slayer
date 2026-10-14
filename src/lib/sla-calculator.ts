@@ -854,6 +854,20 @@ export const getDowntime = (sla: number): Omit<CalculationResult, 'compositeSla'
   };
 };
 
+/**
+ * Probability of getting through a window of `minutes` without an
+ * incident, given the system is up at the start. Uses the failure rate
+ * while up (frequency / availability) with exponential times between
+ * failures, i.e. R(t) = exp(-λ·t).
+ */
+export const incidentFreeProbability = (reliability: ReliabilityResult, minutes: number): number => {
+  const availability = reliability.sla / 100;
+  if (availability <= 0) return 0;
+  if (reliability.frequency <= 0 || minutes <= 0) return 1;
+  const failuresPerMinuteUp = reliability.frequency / availability / YEAR_MINUTES;
+  return Math.exp(-failuresPerMinuteUp * minutes);
+};
+
 export const slaFromDowntime = (seconds: number, period: DowntimePeriod): number => {
   const totalSeconds = {
     year: 365.25 * 24 * 60 * 60,
