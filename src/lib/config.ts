@@ -1,4 +1,5 @@
 import type { DowntimePeriod, FailureDomain, InputMode, SLAItem } from './sla-calculator';
+import { MAX_FAILURE_DOMAINS } from './domains';
 
 const MAX_DEPTH = 64;
 
@@ -21,6 +22,7 @@ const RANGES: Partial<Record<keyof SLAItem, [number, number]>> = {
 
 const parseFailureDomains = (raw: unknown, path: string): FailureDomain[] => {
   if (!Array.isArray(raw)) throw new ConfigError(`${path} must be an array`);
+  if (raw.length > MAX_FAILURE_DOMAINS) throw new ConfigError(`${path} can have at most ${MAX_FAILURE_DOMAINS} domains`);
   const ids = new Set<string>();
   return raw.map((entry, i) => {
     const entryPath = `${path}[${i}]`;
