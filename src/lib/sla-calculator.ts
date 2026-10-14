@@ -233,6 +233,10 @@ const getAllItems = (item: SLAItem): SLAItem[] =>
 const DOMAIN_STATE_EPSILON = 1e-15;
 const DEFAULT_DOMAIN_MTTR = 120;
 
+/** The MTTR the calculation uses for a domain (unset or non-positive values fall back to the default). */
+export const getDomainMttr = (domain: FailureDomain): number =>
+  domain.mttr && domain.mttr > 0 ? domain.mttr : DEFAULT_DOMAIN_MTTR;
+
 /** Domains that are defined and referenced by at least one item. */
 const getRelevantDomains = (root: SLAItem, domains: FailureDomain[]): FailureDomain[] => {
   if (domains.length === 0) return [];
@@ -286,7 +290,7 @@ const evaluateSystem = (root: SLAItem, overrides: Overrides = {}, domains = root
   for (const domain of relevant) {
     const domainAvailability = clamp(domain.sla / 100, 0, 1);
     if (domainAvailability <= 0 || domainAvailability >= 1) continue;
-    const domainFrequency = ((1 - domainAvailability) * YEAR_MINUTES) / (domain.mttr && domain.mttr > 0 ? domain.mttr : DEFAULT_DOMAIN_MTTR);
+    const domainFrequency = ((1 - domainAvailability) * YEAR_MINUTES) / getDomainMttr(domain);
     let whenUp = 0;
     let whenDown = 0;
     for (const { state, metrics } of results) {
