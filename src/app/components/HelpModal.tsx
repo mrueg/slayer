@@ -13,11 +13,14 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         title: "Mathematical Foundations",
         icon: <Calculator className="w-4 h-4" />,
         content: [
-          { label: "Series Availability", text: "Calculates the product of individual component availabilities. The system fails if any single component in the chain fails." },
-          { label: "Parallel Redundancy", text: "Calculates system availability using the redundancy formula, adjusted by the switch reliability (Failover %) of the primary path." },
-          { label: "K-out-of-N Modeling", text: "Uses dynamic programming to determine the exact success probability for nodes requiring a specific minimum capacity (Min UP) to function." },
-          { label: "MTTR Derivation", text: "Derives system-wide Mean Time To Recovery using frequency-weighted averages of component restoration times." },
-          { label: "RTO & RPO", text: "Aggregates Recovery Time Objectives (sum for series, min for parallel) and Recovery Point Objectives (max for series, min for parallel)." }
+          { label: "Series Availability", text: "The product of the children's availabilities. The group fails if any child fails." },
+          { label: "Parallel & Failover", text: "With Nodes UP = 1 the first child is the primary: Failover % only matters when the primary fails, and the group fails if the switch fails or every standby is down too. With Nodes UP > 1 the group is a k-of-n pool behind the switch." },
+          { label: "K-out-of-N", text: "Replicas with Min UP (and parallel groups with Nodes UP) use dynamic programming for the exact probability that enough of them are up, even with different availabilities." },
+          { label: "Failure Frequency & MTTR", text: "Each component fails (1 − SLA) × year / MTTR times a year. Frequencies are combined with the Birnbaum importance formula, so frequency × MTTR always matches the SLA and the simulation agrees with the headline number." },
+          { label: "Shared Failure Domains", text: "Zones, regions or providers with their own SLA and MTTR. Items tagged with a domain fail together when it fails; availability is computed by conditioning on which domains are up." },
+          { label: "Shared Replica Failures", text: "Shared % (beta factor) is the share of a replica's failures that hit all replicas at once, such as the same bug or bad deploy. It caps what extra replicas can achieve." },
+          { label: "Optional Items", text: "Optional items are left out of the calculation entirely, so they never count as a perfect redundant path." },
+          { label: "RTO & RPO", text: "Recovery Time Objectives add up in series and take the minimum in parallel; Recovery Point Objectives take the maximum in series and the minimum in parallel. Unset values are ignored." }
         ]
       }
     ],
@@ -26,10 +29,13 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         title: "Probabilistic Analysis",
         icon: <BarChart3 className="w-4 h-4 text-indigo-500" />,
         content: [
-          { label: "Monte Carlo Engine", text: "Executes 10,000 yearly iterations using Poisson arrival rates for incidents and Exponential distributions for recovery durations." },
-          { label: "Sensitivity Analysis", text: "Identifies System Bottlenecks by calculating the delta between current SLA and a theoretical 100% available state for each node." },
-          { label: "Blast Radius Heatmap", text: "Calculates the health impact of individual failures. Nodes are color-coded based on the percentage of total system SLA lost if they fail." },
-          { label: "Error Budgeting", text: "Tracks consumed downtime against allowed duration for a specified period (Day/Month/Year) based on the target SLA." }
+          { label: "Monte Carlo Engine", text: "Simulates 10,000 years in a background worker: incidents arrive as a Poisson process and recoveries are exponential. Each run shows its seed, so it can be reproduced." },
+          { label: "Incident-free Chance", text: "The probability of getting through a week, month, quarter, year or a custom window without any incident, from R(t) = exp(−λt)." },
+          { label: "Improvement Levers", text: "Ranks every item by the yearly downtime saved if it never failed. The top item gets the System Bottleneck badge." },
+          { label: "Failure Domain Impact", text: "Per domain: how many items it holds, the downtime it causes per year and the system SLA while it is down." },
+          { label: "Blast Radius Heatmap", text: "Colors nodes by the share of system SLA lost if they fail." },
+          { label: "Model Checks", text: "Flags valid but likely unintended setups: replicas that must all be up, parallel groups that behave like series, empty groups, a weak primary, redundancy defeated by a shared domain and 100% components." },
+          { label: "Error Budgeting", text: "Tracks consumed downtime against the allowed downtime for a day, month or year at the system SLA." }
         ]
       }
     ],
@@ -38,10 +44,13 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         title: "Interface Guide",
         icon: <Settings className="w-4 h-4 text-slate-500" />,
         content: [
-          { label: "Chaos Mode", text: "Enables manual failure injection. For redundant components, users can specify the exact magnitude of replica failure." },
-          { label: "Cloud SLA Catalog", text: "Searchable database of published SLAs from AWS, Azure, GCP, and Cloudflare to pre-populate component metrics." },
-          { label: "Technical Annotations", text: "Support for multi-line technical notes and assumptions, persistent in both List and Topology views." },
-          { label: "State Persistence", text: "Configurations are handled via Base64-encoded URL hashes for zero-backend sharing and local JSON export/import." }
+          { label: "Undo & Autosave", text: "Every change can be undone (Ctrl/Cmd+Z, redo with Ctrl/Cmd+Shift+Z). The model is saved in your browser and restored on the next visit." },
+          { label: "Sharing", text: "Share copies a compressed link containing the whole model; no server involved. Opening a link loads the model and then removes it from the address bar, so later edits survive a reload." },
+          { label: "Export", text: "Download the configuration as JSON, a report as Markdown or PDF (via the print dialog), or the topology as an SVG or PNG diagram." },
+          { label: "Chaos Mode", text: "Inject failures by hand; for replicated items choose how many replicas to kill. Leaving chaos mode restores everything." },
+          { label: "Templates", text: "Ready-made architectures to start from, including a non-IT example: a metal concert that tries to make it through the night." },
+          { label: "Cloud SLA Catalog", text: "Searchable published SLAs from AWS, Azure, GCP and Cloudflare to pre-fill a component." },
+          { label: "Notes & Theme", text: "Notes on any item show in the list, topology and exports. Dark mode follows your system until you pick one." }
         ]
       }
     ]
