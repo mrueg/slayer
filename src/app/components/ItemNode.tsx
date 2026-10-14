@@ -262,6 +262,24 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 </div>
               )}
 
+              {(item.replicas || 1) > 1 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" title="Share of failures that hit all replicas at once (same bug, same bad deploy)">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Shared %</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={item.commonCause ?? 0}
+                    onChange={(e) => {
+                      const value = parseNumberInput(e.target.value);
+                      if (value !== undefined) onUpdate(item.id, { commonCause: value });
+                    }}
+                    className="w-10 bg-transparent outline-none font-mono text-xs text-center dark:text-slate-200"
+                    aria-label="Shared failures (%)"
+                  />
+                </div>
+              )}
+
               {chaosMode && (
                 <button
                   onClick={() => {
@@ -547,6 +565,24 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   }}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
                 title="Minimum replicas required to be healthy"
+              />
+            </div>
+          )}
+          {(item.replicas || 1) > 1 && (
+            <div className="w-full lg:w-24">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Shared %</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={item.commonCause ?? 0}
+                onChange={(e) => {
+                  const value = parseNumberInput(e.target.value);
+                  if (value !== undefined) onUpdate(item.id, { commonCause: value });
+                }}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                title="Share of failures that hit all replicas at once (same bug, same bad deploy)"
+                aria-label="Shared failures (%)"
               />
             </div>
           )}

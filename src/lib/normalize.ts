@@ -21,6 +21,7 @@ export const normalizeItem = (item: SLAItem): SLAItem => {
 
   const replicas = clamp(Math.floor(next.replicas || 1), 1, MAX_REPLICAS);
   if (next.replicas !== undefined) next.replicas = replicas;
+  if (next.commonCause !== undefined) next.commonCause = clamp(next.commonCause, 0, 100);
   if (next.minReplicasRequired !== undefined) {
     next.minReplicasRequired = clamp(Math.floor(next.minReplicasRequired), 1, replicas);
   }

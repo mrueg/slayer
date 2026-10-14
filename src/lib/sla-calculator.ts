@@ -24,6 +24,7 @@ export interface SLAItem {
   sla?: number; // Percentage, e.g., 99.9 (for components)
   replicas?: number; // Number of redundant instances (for components)
   minReplicasRequired?: number; // For components: min up replicas
+  commonCause?: number; // Beta factor: % of replica failures that hit all replicas at once
   config?: Configuration; // For groups
   minChildrenRequired?: number; // For groups: min up children
   failoverSla?: number; // Failover reliability for parallel groups
@@ -195,10 +196,19 @@ const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
   if (working < required) return { availability: 0, frequency: 0 };
   if (replicas <= 1) return base;
 
-  const availability = calculateKofN(Array(working).fill(base.availability), required);
-  const others = Array(working - 1).fill(base.availability);
+  // Beta-factor model: a share β of each replica's failures (same bug, same
+  // bad config push) takes down all replicas at once; the rest are independent.
+  const beta = clamp((item.commonCause ?? 0) / 100, 0, 1);
+  const unavailability = 1 - base.availability;
+  const shared = { availability: 1 - beta * unavailability, frequency: beta * base.frequency };
+  const independent = { availability: 1 - (1 - beta) * unavailability, frequency: (1 - beta) * base.frequency };
+
+  const pool = calculateKofN(Array(working).fill(independent.availability), required);
+  const others = Array(working - 1).fill(independent.availability);
   const importance = calculateKofN(others, required - 1) - calculateKofN(others, required);
-  const frequency = working * base.frequency * Math.max(0, importance);
+  const availability = shared.availability * pool;
+  const frequency = shared.frequency * pool
+    + shared.availability * working * independent.frequency * Math.max(0, importance);
 
   return { availability, frequency };
 };
@@ -505,7 +515,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
         type: item.type,
         formula: `${k}-out-of-${replicas} Redundancy`,
         explanation: `${replicas}x Redundancy: SLA improved by parallel replicas, MTTR reduced.`,
-        inputValues: [`Base MTTR: ${baseMttr}m`, `Min Required: ${k}`],
+        inputValues: [`Base MTTR: ${baseMttr}m`, `Min Required: ${k}`, ...(item.commonCause ? [`Shared failures: ${item.commonCause}%`] : [])],
         result: rel.sla,
         mttrResult: rel.mttr,
         frequencyResult: rel.frequency,

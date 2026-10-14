@@ -311,3 +311,44 @@ describe('incidentFreeProbability', () => {
     expect(week).toBeCloseTo(day ** 7, 10);
   });
 });
+
+describe('shared replica failures (beta factor)', () => {
+  it('changes nothing at 0%', () => {
+    const plain = component('a', 99, { replicas: 3, minReplicasRequired: 2 });
+    expect(calculateSLA({ ...plain, commonCause: 0 })).toBe(calculateSLA(plain));
+    expect(calculateReliability({ ...plain, commonCause: 0 })).toEqual(calculateReliability(plain));
+  });
+
+  it('matches the beta-factor formula for 1-of-2', () => {
+    const u = 0.01;
+    const beta = 0.1;
+    const expected = (1 - beta * u) * (1 - ((1 - beta) * u) ** 2) * 100;
+    expect(calculateSLA(component('a', 99, { replicas: 2, commonCause: 10 }))).toBeCloseTo(expected, 10);
+  });
+
+  it('caps redundancy: even many replicas cannot beat the shared failures', () => {
+    const many = calculateSLA(component('a', 99, { replicas: 10, commonCause: 5 }));
+    expect(many).toBeLessThan((1 - 0.05 * 0.01) * 100 + 1e-9);
+    expect(many).toBeGreaterThan((1 - 0.05 * 0.01) * 100 - 1e-6);
+  });
+
+  it('at 100% the replicas behave like a single instance', () => {
+    expect(calculateSLA(component('a', 99, { replicas: 3, commonCause: 100 }))).toBeCloseTo(99, 10);
+  });
+
+  it('derives the failure frequency by hand for 1-of-2', () => {
+    const u = 0.01;
+    const beta = 0.1;
+    const f = baseFrequency(99, 60);
+    // Shared events stop the pair whenever the pool is up; an independent
+    // failure stops it only while the other replica is independently down.
+    const pool = 1 - ((1 - beta) * u) ** 2;
+    const expected = beta * f * pool + (1 - beta * u) * 2 * (1 - beta) * f * (1 - beta) * u;
+    expect(calculateReliability(component('a', 99, { replicas: 2, commonCause: 10, mttr: 60 })).frequency).toBeCloseTo(expected, 10);
+  });
+
+  it('applies to replicated groups too', () => {
+    const pool = group('pool', 'series', [component('x', 99.9), component('y', 99.9)], { replicas: 2 });
+    expect(calculateSLA({ ...pool, commonCause: 30 })).toBeLessThan(calculateSLA(pool));
+  });
+});
