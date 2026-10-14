@@ -12,7 +12,7 @@
 *   **Hierarchical Modeling**: Build dependency trees of series and parallel groups, components and optional items.
 *   **K-out-of-N Redundancy**: Exact success probability for replicas or groups that need a minimum number of members up (e.g. a 16-node blade chassis requiring 12 nodes).
 *   **Failover**: Parallel groups model an active/standby primary with a "Failover %" for the switch and a switchover time per failover, or a k-of-n pool behind it.
-*   **Shared Failure Domains**: Zones, regions or providers with their own SLA and MTTR; tagged items fail together (common-cause failures).
+*   **Shared Failure Domains**: Zones, regions or providers with their own SLA and MTTR; tagged items fail together (common-cause failures). Up to 10 per model.
 *   **Shared Replica Failures**: A beta factor ("Shared %") for the share of failures that hit all replicas at once, such as the same bug or bad deploy.
 *   **MTTR & Failure Frequency**: Derived consistently across the tree, so frequency × MTTR always matches the SLA.
 *   **RTO & RPO**: Aggregates Recovery Time and Recovery Point Objectives across the tree and checks them against targets.

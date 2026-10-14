@@ -140,12 +140,18 @@ interface Overrides {
   forceUpId?: string;
   forceDownId?: string;
   downDomains?: ReadonlySet<string>;
+  // Failure domains to condition on at each item (see assignDomainOwners)
+  domainOwners?: ReadonlyMap<SLAItem, FailureDomain[]>;
 }
 
 interface NodeMetrics {
   availability: number; // 0-1
   frequency: number; // failures per year
+  domainFrequency: number; // the part of frequency caused by failure domain outages
 }
+
+const UP: NodeMetrics = { availability: 1, frequency: 0, domainFrequency: 0 };
+const DOWN: NodeMetrics = { availability: 0, frequency: 0, domainFrequency: 0 };
 
 /**
  * Evaluates availability and failure frequency of an item.
@@ -157,13 +163,18 @@ interface NodeMetrics {
  * Monte Carlo simulation agrees with the headline SLA.
  */
 const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
-  if (item.id === overrides.forceDownId) return { availability: 0, frequency: 0 };
-  if (item.isOptional) return { availability: 1, frequency: 0 };
+  const owned = overrides.domainOwners?.get(item);
+  return owned ? conditionOnDomains(item, owned, overrides) : evaluateItem(item, overrides);
+};
+
+const evaluateItem = (item: SLAItem, overrides: Overrides): NodeMetrics => {
+  if (item.id === overrides.forceDownId) return DOWN;
+  if (item.isOptional) return UP;
   // A failed domain takes the item down regardless of the item's own health
   if (overrides.downDomains && item.domains?.some(d => overrides.downDomains!.has(d))) {
-    return { availability: 0, frequency: 0 };
+    return DOWN;
   }
-  if (item.id === overrides.forceUpId) return { availability: 1, frequency: 0 };
+  if (item.id === overrides.forceUpId) return UP;
 
   let base: NodeMetrics;
 
@@ -173,23 +184,26 @@ const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
     const frequency = availability > 0 && availability < 1
       ? ((1 - availability) * YEAR_MINUTES) / mttr
       : 0;
-    base = { availability, frequency };
+    base = { availability, frequency, domainFrequency: 0 };
   } else {
     const childMetrics = getActiveChildren(item).map(child => evaluate(child, overrides));
     const probabilities = childMetrics.map(m => m.availability);
     const availability = combineGroup(item, probabilities);
 
     let frequency = 0;
+    let domainFrequency = 0;
     childMetrics.forEach((child, i) => {
       if (child.frequency === 0) return;
       const up = [...probabilities];
       const down = [...probabilities];
       up[i] = 1;
       down[i] = 0;
-      frequency += child.frequency * Math.max(0, combineGroup(item, up) - combineGroup(item, down));
+      const importance = Math.max(0, combineGroup(item, up) - combineGroup(item, down));
+      frequency += child.frequency * importance;
+      domainFrequency += child.domainFrequency * importance;
     });
 
-    base = { availability, frequency };
+    base = { availability, frequency, domainFrequency };
 
     // Failover is not instant: every successful switch from the primary to a
     // standby is an outage of failoverTime minutes on top of the above.
@@ -198,32 +212,37 @@ const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
       && getMinChildrenRequired(item, probabilities.length) === 1) {
       const switchReliability = clamp((item.failoverSla ?? 100) / 100, 0, 1);
       const standbyAvailable = 1 - probabilities.slice(1).reduce((acc, p) => acc * (1 - p), 1);
-      const failovers = childMetrics[0].frequency * switchReliability * standbyAvailable;
+      // Primary failures caused by a failure domain outage are not charged
+      const primaryFailures = childMetrics[0].frequency - childMetrics[0].domainFrequency;
+      const failovers = primaryFailures * switchReliability * standbyAvailable;
       const lost = Math.min(availability, (failovers * switchover) / YEAR_MINUTES);
-      base = { availability: availability - lost, frequency: frequency + failovers };
+      base = { availability: availability - lost, frequency: frequency + failovers, domainFrequency };
     }
   }
 
   // Apply redundancy (replicas) to both components and groups
   const { replicas, required, working } = getReplicaParams(item);
-  if (working < required) return { availability: 0, frequency: 0 };
+  if (working < required) return DOWN;
   if (replicas <= 1) return base;
 
   // Beta-factor model: a share β of each replica's failures (same bug, same
   // bad config push) takes down all replicas at once; the rest are independent.
   const beta = clamp((item.commonCause ?? 0) / 100, 0, 1);
   const unavailability = 1 - base.availability;
-  const shared = { availability: 1 - beta * unavailability, frequency: beta * base.frequency };
-  const independent = { availability: 1 - (1 - beta) * unavailability, frequency: (1 - beta) * base.frequency };
+  const sharedAvailability = 1 - beta * unavailability;
+  const independentAvailability = 1 - (1 - beta) * unavailability;
 
-  const pool = calculateKofN(Array(working).fill(independent.availability), required);
-  const others = Array(working - 1).fill(independent.availability);
+  const pool = calculateKofN(Array(working).fill(independentAvailability), required);
+  const others = Array(working - 1).fill(independentAvailability);
   const importance = calculateKofN(others, required - 1) - calculateKofN(others, required);
-  const availability = shared.availability * pool;
-  const frequency = shared.frequency * pool
-    + shared.availability * working * independent.frequency * Math.max(0, importance);
+  // System failures per failure of a single replica
+  const perFailure = beta * pool + sharedAvailability * working * (1 - beta) * Math.max(0, importance);
 
-  return { availability, frequency };
+  return {
+    availability: sharedAvailability * pool,
+    frequency: base.frequency * perFailure,
+    domainFrequency: base.domainFrequency * perFailure,
+  };
 };
 
 const getAllItems = (item: SLAItem): SLAItem[] =>
@@ -250,7 +269,7 @@ const getRelevantDomains = (root: SLAItem, domains: FailureDomain[]): FailureDom
 };
 
 interface DomainState {
-  down: Set<string>;
+  down: string[];
   probability: number;
 }
 
@@ -259,7 +278,7 @@ const enumerateDomainStates = (domains: FailureDomain[]): DomainState[] => {
   const walk = (index: number, down: string[], probability: number) => {
     if (probability < DOMAIN_STATE_EPSILON) return;
     if (index === domains.length) {
-      states.push({ down: new Set(down), probability });
+      states.push({ down, probability });
       return;
     }
     const availability = clamp(domains[index].sla / 100, 0, 1);
@@ -271,43 +290,90 @@ const enumerateDomainStates = (domains: FailureDomain[]): DomainState[] => {
 };
 
 /**
- * Evaluates a tree including shared failure domains by conditioning on
- * which domains are up. Domain failure frequencies are added with the same
- * Birnbaum formula used for components, so frequency × MTTR stays
- * consistent with the availability.
+ * Evaluates an item by conditioning on which of the given domains are up.
+ * Domain failure frequencies are added with the same Birnbaum formula used
+ * for components, so frequency × MTTR stays consistent with the availability.
  */
-const evaluateSystem = (root: SLAItem, overrides: Overrides = {}, domains = root.failureDomains || []): NodeMetrics => {
-  const relevant = getRelevantDomains(root, domains);
-  if (relevant.length === 0) return evaluate(root, overrides);
-
-  const results = enumerateDomainStates(relevant).map(state => ({
+const conditionOnDomains = (item: SLAItem, domains: FailureDomain[], overrides: Overrides): NodeMetrics => {
+  const results = enumerateDomainStates(domains).map(state => ({
     state,
-    metrics: evaluate(root, { ...overrides, downDomains: state.down }),
+    metrics: evaluateItem(item, {
+      ...overrides,
+      downDomains: new Set([...(overrides.downDomains || []), ...state.down]),
+    }),
   }));
 
   let availability = 0;
   let frequency = 0;
+  let domainFrequency = 0;
   for (const { state, metrics } of results) {
     availability += state.probability * metrics.availability;
     frequency += state.probability * metrics.frequency;
+    domainFrequency += state.probability * metrics.domainFrequency;
   }
 
-  for (const domain of relevant) {
+  for (const domain of domains) {
     const domainAvailability = clamp(domain.sla / 100, 0, 1);
     if (domainAvailability <= 0 || domainAvailability >= 1) continue;
-    const domainFrequency = ((1 - domainAvailability) * YEAR_MINUTES) / getDomainMttr(domain);
     let whenUp = 0;
     let whenDown = 0;
     for (const { state, metrics } of results) {
-      if (state.down.has(domain.id)) whenDown += state.probability * metrics.availability;
+      if (state.down.includes(domain.id)) whenDown += state.probability * metrics.availability;
       else whenUp += state.probability * metrics.availability;
     }
     const importance = whenUp / domainAvailability - whenDown / (1 - domainAvailability);
-    frequency += domainFrequency * Math.max(0, importance);
+    const caused = ((1 - domainAvailability) * YEAR_MINUTES) / getDomainMttr(domain) * Math.max(0, importance);
+    frequency += caused;
+    domainFrequency += caused;
   }
 
-  return { availability, frequency };
+  return { availability, frequency, domainFrequency };
 };
+
+/**
+ * Picks the item at which to condition on each domain: the lowest one whose
+ * subtree contains every critical item tagged with it. Once all domains
+ * reaching into a subtree are fixed, the subtree is independent of the rest
+ * of the system, so conditioning there is exact. A domain used in one branch
+ * then costs two evaluations of that branch instead of doubling the work for
+ * the whole tree. Replicated items take every domain below them, since all
+ * replicas share it.
+ */
+const assignDomainOwners = (root: SLAItem, domains: FailureDomain[]): Map<SLAItem, FailureDomain[]> => {
+  const owners = new Map<SLAItem, FailureDomain[]>();
+  const byId = new Map(domains.map(d => [d.id, d]));
+  if (byId.size === 0 || root.isOptional) return owners;
+
+  // Domains referenced anywhere in each critical subtree
+  const refs = new Map<SLAItem, Set<string>>();
+  const collect = (item: SLAItem): Set<string> => {
+    const found = new Set((item.domains || []).filter(id => byId.has(id)));
+    for (const child of getActiveChildren(item)) for (const id of collect(child)) found.add(id);
+    refs.set(item, found);
+    return found;
+  };
+  collect(root);
+
+  // pending: domains reaching into this subtree that no ancestor conditions on
+  const assign = (item: SLAItem, pending: Set<string>) => {
+    const children = getActiveChildren(item);
+    // Replicas are independent copies of the subtree, but a domain inside it
+    // is shared by all of them, so it has to be fixed before replicating
+    const replicated = (item.replicas || 1) > 1;
+    const owned = [...pending].filter(id => replicated
+      || item.domains?.includes(id) || children.filter(child => refs.get(child)!.has(id)).length > 1);
+    if (owned.length > 0) owners.set(item, owned.map(id => byId.get(id)!));
+    for (const child of children) {
+      assign(child, new Set([...refs.get(child)!].filter(id => pending.has(id) && !owned.includes(id))));
+    }
+  };
+  assign(root, refs.get(root)!);
+  return owners;
+};
+
+/** Evaluates a tree including the shared failure domains its items are tagged with. */
+const evaluateSystem = (root: SLAItem, overrides: Overrides = {}, domains = root.failureDomains || []): NodeMetrics =>
+  evaluate(root, { ...overrides, domainOwners: assignDomainOwners(root, domains) });
 
 /**
  * SLA of an item in percent. Failure domains default to the ones defined on

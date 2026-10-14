@@ -3,6 +3,7 @@
 import React from 'react';
 import { MapPinned, Plus, Trash2 } from 'lucide-react';
 import { DomainImpact, FailureDomain, formatDuration, formatSLAPercentage, getDomainMttr } from '@/lib/sla-calculator';
+import { MAX_FAILURE_DOMAINS } from '@/lib/domains';
 
 interface FailureDomainsPanelProps {
   domains: FailureDomain[];
@@ -16,6 +17,7 @@ const inputClass = "w-full bg-white dark:bg-slate-900 border border-slate-200 da
 
 const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impact, onAdd, onUpdate, onRemove }) => {
   const impactById = new Map(impact.map(entry => [entry.id, entry]));
+  const atLimit = domains.length >= MAX_FAILURE_DOMAINS;
 
   return (
     <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
@@ -95,10 +97,11 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
 
       <button
         onClick={onAdd}
-        className="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-violet-400 hover:text-violet-500 transition-colors"
+        disabled={atLimit}
+        className="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:border-violet-400 hover:text-violet-500 transition-colors disabled:opacity-50 disabled:pointer-events-none"
       >
         <Plus className="w-3.5 h-3.5" />
-        Add failure domain
+        {atLimit ? `Up to ${MAX_FAILURE_DOMAINS} failure domains` : 'Add failure domain'}
       </button>
     </section>
   );

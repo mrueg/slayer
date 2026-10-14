@@ -19,6 +19,7 @@ describe('parseConfig', () => {
     [{ id: 'x', type: 'component', name: 42 }, 'root.name'],
     [{ id: 'x', type: 'component', sla: 120 }, 'root.sla must be between 0 and 100'],
     [{ id: 'x', type: 'component', replicas: 0 }, 'root.replicas must be between 1 and 99'],
+    [{ id: 'x', type: 'component', failureDomains: Array.from({ length: 11 }, (_, i) => ({ id: `z${i}`, sla: 99.9 })) }, 'root.failureDomains can have at most 10 domains'],
   ])('rejects %j', (input, message) => {
     expect(() => parseConfig(input)).toThrow(ConfigError);
     expect(() => parseConfig(input)).toThrow(message);
