@@ -1,5 +1,6 @@
 import {
   calculateDRMetrics,
+  calculateItemSLA,
   calculateReliability,
   calculateSLA,
   formatDuration,
@@ -98,7 +99,7 @@ const collect = (root: SLAItem, options: ReportOptions) => {
       depth,
       name: item.name || '(unnamed)',
       type: typeLabel(item),
-      sla: item.isOptional ? 'optional' : percent(calculateSLA(item, root.failureDomains || [])),
+      sla: item.isOptional ? 'optional' : percent(calculateItemSLA(item, root.failureDomains || [])),
       redundancy: redundancyLabel(item),
       mttr: item.type === 'component' ? formatDuration(item.mttr || 60) : '—',
       rto: item.type === 'component' ? optionalDuration(item.rto) : '—',
@@ -133,8 +134,8 @@ export const renderReportMarkdown = (root: SLAItem, options: ReportOptions): str
   }
 
   if (data.levers.length > 0) {
-    lines.push('', '## Improvement Levers', '', 'Yearly downtime saved if the item never failed:', '',
-      ...data.levers.map((lever, i) => `${i + 1}. **${markdownCell(lever.name)}** — ${formatDuration(lever.downtimeSavedPerYear)}`));
+    lines.push('', '## Improvement Levers', '', 'Yearly downtime saved if the item or failure domain never failed:', '',
+      ...data.levers.map((lever, i) => `${i + 1}. **${markdownCell(lever.name)}**${lever.type === 'domain' ? ' (domain)' : ''} — ${formatDuration(lever.downtimeSavedPerYear)}`));
   }
 
   if (data.domains.length > 0) {
@@ -166,8 +167,8 @@ export const renderReportHtml = (root: SLAItem, options: ReportOptions): string 
   ];
   if (data.simulation) sections.push(`<h2>Monte Carlo Simulation</h2>${htmlTable(data.simulation)}`);
   if (data.levers.length > 0) {
-    sections.push(`<h2>Improvement Levers</h2><p>Yearly downtime saved if the item never failed:</p><ol>${data.levers
-      .map(lever => `<li><strong>${escapeXml(lever.name)}</strong> — ${escapeXml(formatDuration(lever.downtimeSavedPerYear))}</li>`).join('')}</ol>`);
+    sections.push(`<h2>Improvement Levers</h2><p>Yearly downtime saved if the item or failure domain never failed:</p><ol>${data.levers
+      .map(lever => `<li><strong>${escapeXml(lever.name)}</strong>${lever.type === 'domain' ? ' (domain)' : ''} — ${escapeXml(formatDuration(lever.downtimeSavedPerYear))}</li>`).join('')}</ol>`);
   }
   if (data.domains.length > 0) {
     sections.push(`<h2>Failure Domains</h2><p>Shared infrastructure; tagged items fail together when it fails.</p><table class="items"><thead><tr>${DOMAIN_HEADERS

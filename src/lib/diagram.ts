@@ -1,4 +1,4 @@
-import { calculateSLA, formatSLAPercentage, type FailureDomain, type SLAItem } from './sla-calculator';
+import { calculateItemSLA, formatSLAPercentage, type FailureDomain, type SLAItem } from './sla-calculator';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 66;
@@ -93,7 +93,7 @@ export const renderDiagramSvg = (root: SLAItem): string => {
       `<g>` +
       `<rect x="${x}" y="${y}" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${isDown ? 2.5 : 1.5}"${item.isOptional ? ' stroke-dasharray="5 4"' : ''}/>` +
       `<text x="${centerX}" y="${y + 22}" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">${escapeXml(truncate(item.name || '(unnamed)', MAX_NAME_CHARS))}</text>` +
-      `<text x="${centerX}" y="${y + 41}" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="${isDown ? '#dc2626' : '#2563eb'}">${isDown ? 'DOWN' : `${formatSLAPercentage(calculateSLA(item, domains))}%`}</text>` +
+      `<text x="${centerX}" y="${y + 41}" text-anchor="middle" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="${isDown ? '#dc2626' : '#2563eb'}">${isDown ? 'DOWN' : `${formatSLAPercentage(calculateItemSLA(item, domains))}%`}</text>` +
       (detail ? `<text x="${centerX}" y="${y + 57}" text-anchor="middle" font-size="10" fill="#64748b">${escapeXml(detail)}</text>` : '') +
       `</g>`
     );

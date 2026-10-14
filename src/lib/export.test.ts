@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateSLA, formatSLAPercentage, type SLAItem } from './sla-calculator';
+import { calculateItemSLA, formatSLAPercentage, type SLAItem } from './sla-calculator';
 import { renderDiagramSvg } from './diagram';
 import { localDate, renderReportHtml, renderReportMarkdown } from './report';
 
@@ -115,8 +115,8 @@ describe('exports with failure domains', () => {
     ],
   };
   const pool = zoned.children![0];
-  const poolWithDomains = `${formatSLAPercentage(calculateSLA(pool, zoned.failureDomains))}%`;
-  const poolWithout = `${formatSLAPercentage(calculateSLA(pool))}%`;
+  const poolWithDomains = `${formatSLAPercentage(calculateItemSLA(pool, zoned.failureDomains || []))}%`;
+  const poolWithout = `${formatSLAPercentage(calculateItemSLA(pool, []))}%`;
 
   it('uses domain-aware SLAs for sub-groups', () => {
     expect(poolWithDomains).not.toBe(poolWithout);
