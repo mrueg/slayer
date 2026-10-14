@@ -33,7 +33,7 @@
 *   **Infrastructure Topology**: Switch between the list editor and a horizontal or vertical topology diagram.
 *   **Undo & Autosave**: Undo/redo every change; the model is saved in your browser.
 *   **Export**: Configuration (JSON), report (Markdown or PDF) and topology diagram (SVG or PNG).
-*   **Templates**: Common architectures to start from, plus a non-IT example: a metal concert.
+*   **Examples**: Common architectures to start from, plus a non-IT one: a metal concert.
 *   **Cloud SLA Catalog**: Searchable published SLAs from AWS, Azure, GCP and Cloudflare.
 *   **Technical Annotations**: Notes and assumptions on any item, shown in the editor, topology and exports.
 

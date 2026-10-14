@@ -57,7 +57,7 @@ import { renderDiagramSvg } from '@/lib/diagram';
 import { renderReportHtml, renderReportMarkdown } from '@/lib/report';
 import { downloadBlob, exportFilename, printHtml, svgToPngBlob } from '@/app/download';
 import { isDarkMode, setDarkMode, watchTheme } from '@/lib/theme';
-import { TEMPLATES } from '@/app/templates';
+import { EXAMPLES } from '@/app/examples';
 import ItemNode from '@/app/components/ItemNode';
 import HelpModal from '@/app/components/HelpModal';
 import MonteCarloHistogram from '@/app/components/MonteCarloHistogram';
@@ -147,7 +147,7 @@ export default function ReliabilityModeling() {
   useEffect(() => watchTheme(), []);
   const [chaosMode, setChaosMode] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [showExamples, setShowExamples] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showHistogram, setShowHistogram] = useState(false);
@@ -163,7 +163,7 @@ export default function ReliabilityModeling() {
   const [autoSimulate, setAutoSimulate] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const templateRef = useRef<HTMLDivElement>(null);
+  const examplesRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   // Restore on mount: a shared link wins over the autosaved model
@@ -225,8 +225,8 @@ export default function ReliabilityModeling() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (templateRef.current && !templateRef.current.contains(event.target as Node)) {
-        setShowTemplates(false);
+      if (examplesRef.current && !examplesRef.current.contains(event.target as Node)) {
+        setShowExamples(false);
       }
       if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
         setShowExportMenu(false);
@@ -255,10 +255,10 @@ export default function ReliabilityModeling() {
     }
   };
 
-  const handleLoadTemplate = (templateId: string) => {
-    if (confirm(`Load the "${TEMPLATES[templateId].name}" template? This will replace your current work.`)) {
-      setRoot(TEMPLATES[templateId].data);
-      setShowTemplates(false);
+  const handleLoadExample = (exampleId: string) => {
+    if (confirm(`Load the "${EXAMPLES[exampleId].name}" example? This will replace your current work.`)) {
+      setRoot(EXAMPLES[exampleId].data);
+      setShowExamples(false);
     }
   };
 
@@ -543,29 +543,29 @@ export default function ReliabilityModeling() {
               >
                 <Redo2 className="w-4 h-4" />
               </button>
-              <div className="relative" ref={templateRef}>
+              <div className="relative" ref={examplesRef}>
                 <button 
-                  onClick={() => setShowTemplates(!showTemplates)}
+                  onClick={() => setShowExamples(!showExamples)}
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-                  title="Load infrastructure templates"
+                  title="Load an example model"
                 >
                   <Library className="w-4 h-4" />
-                  <span className="hidden xl:inline">Templates</span>
-                  <ChevronDown className={cn("w-3 h-3 transition-transform", showTemplates && "rotate-180")} />
+                  <span className="hidden xl:inline">Examples</span>
+                  <ChevronDown className={cn("w-3 h-3 transition-transform", showExamples && "rotate-180")} />
                 </button>
                 
-                {showTemplates && (
+                {showExamples && (
                   <div className="absolute top-full mt-2 left-0 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-3 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 mb-1">
                       Architecture Patterns
                     </div>
-                    {Object.entries(TEMPLATES).map(([id, template]) => (
+                    {Object.entries(EXAMPLES).map(([id, example]) => (
                       <button
                         key={id}
-                        onClick={() => handleLoadTemplate(id)}
+                        onClick={() => handleLoadExample(id)}
                         className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex flex-col"
                       >
-                        <span className="font-bold">{template.name}</span>
+                        <span className="font-bold">{example.name}</span>
                       </button>
                     ))}
                   </div>

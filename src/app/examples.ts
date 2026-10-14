@@ -1,6 +1,6 @@
 import { SLAItem } from '@/lib/sla-calculator';
 
-export const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
+export const EXAMPLES: Record<string, { name: string, data: SLAItem }> = {
   serverless: {
     name: "Modern Serverless App (AWS)",
     data: {
@@ -305,7 +305,7 @@ export const TEMPLATES: Record<string, { name: string, data: SLAItem }> = {
     }
   },
   concert: {
-    name: "Metal Concert (non-IT example)",
+    name: "Metal Concert (non-IT)",
     data: {
       id: 'root',
       name: "Reign in Uptime: Tonight's Show",
