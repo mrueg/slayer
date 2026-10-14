@@ -52,6 +52,7 @@ import { createHistory, historyReducer } from '@/lib/history';
 import { loadSavedModel, saveModel } from '@/lib/autosave';
 import { normalizeItem } from '@/lib/normalize';
 import { updateItemInTree, removeItemFromTree, addChildToGroup, removeDomainReferences } from '@/lib/tree';
+import { nextDomainName } from '@/lib/domains';
 import { cn } from '@/lib/cn';
 import { renderDiagramSvg } from '@/lib/diagram';
 import { renderReportHtml, renderReportMarkdown } from '@/lib/report';
@@ -401,7 +402,7 @@ export default function ReliabilityModeling() {
 
   const handleAddDomain = () => {
     setSimulationResult(null);
-    const domain: FailureDomain = { id: generateId(), name: `Zone ${failureDomains.length + 1}`, sla: 99.99, mttr: 120 };
+    const domain: FailureDomain = { id: generateId(), name: nextDomainName(failureDomains), sla: 99.99, mttr: 120 };
     setRoot({ ...root, failureDomains: [...failureDomains, domain] });
   };
 
