@@ -65,6 +65,7 @@ import CalculationBreakdown from '@/app/components/CalculationBreakdown';
 import TopologyView from '@/app/components/TopologyView';
 import SensitivityRanking from '@/app/components/SensitivityRanking';
 import ModelChecks from '@/app/components/ModelChecks';
+import IncidentFreeOdds from '@/app/components/IncidentFreeOdds';
 import FailureDomainsPanel from '@/app/components/FailureDomainsPanel';
 import { getModelWarnings, type ModelWarning } from '@/lib/warnings';
 import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
@@ -155,6 +156,7 @@ export default function ReliabilityModeling() {
   const [budgetPeriod, setBudgetPeriod] = useState<DowntimePeriod>('month');
   const [targetRto, setTargetRto] = useState(240); // 4 hours
   const [targetRpo, setTargetRpo] = useState(60); // 1 hour
+  const [missionHours, setMissionHours] = useState(3);
   const [simulationResult, setSimulationResult] = useState<MonteCarloResult | null>(null);
   const [overrideTargetSla, setOverrideTargetSla] = useState<number | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -751,12 +753,15 @@ export default function ReliabilityModeling() {
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400 text-sm">Expected Frequency</span>
                       <span className="font-mono font-medium">
-                        {reliability.frequency > 0 
-                          ? `1 incident every ${(1 / reliability.frequency).toFixed(1)} years`
-                          : "0 incidents"}
+                        {reliability.frequency <= 0
+                          ? "0 incidents"
+                          : reliability.frequency >= 1
+                            ? `${reliability.frequency.toLocaleString('en-US', { maximumFractionDigits: reliability.frequency >= 10 ? 0 : 1 })} incidents/year`
+                            : `1 incident every ${(1 / reliability.frequency).toFixed(1)} years`}
                       </span>
                     </div>
                   </div>
+                  <IncidentFreeOdds reliability={reliability} missionHours={missionHours} onMissionHoursChange={setMissionHours} />
                 </div>
 
                 <div className="pt-4 border-t border-slate-800">
