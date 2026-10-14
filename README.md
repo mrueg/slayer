@@ -8,35 +8,42 @@
 
 ## Core Features
 
-### 1. Advanced Reliability Engine
-*   **Hierarchical Modeling**: Build complex dependency trees with nested groups and components.
-*   **K-out-of-N Redundancy**: Model exact success probability for nodes requiring minimum capacity (e.g., a 16-node blade chassis requiring 12 nodes UP).
-*   **Failover Switching**: Parallel configurations include a "Failover %" to model the reliability of the switch/load-balancer mechanism itself.
-*   **MTTR & Frequency**: Derives system-wide Mean Time To Recovery using frequency-weighted averages of individual component restoration times.
-*   **RTO & RPO Modeling**: Mathematically verifies Disaster Recovery goals by aggregating Recovery Time Objectives and Recovery Point Objectives across the tree.
+### 1. Reliability Engine
+*   **Hierarchical Modeling**: Build dependency trees of series and parallel groups, components and optional items.
+*   **K-out-of-N Redundancy**: Exact success probability for replicas or groups that need a minimum number of members up (e.g. a 16-node blade chassis requiring 12 nodes).
+*   **Failover**: Parallel groups model an active/standby primary with a "Failover %" for the switch, or a k-of-n pool behind it.
+*   **Shared Failure Domains**: Zones, regions or providers with their own SLA and MTTR; tagged items fail together (common-cause failures).
+*   **Shared Replica Failures**: A beta factor ("Shared %") for the share of failures that hit all replicas at once, such as the same bug or bad deploy.
+*   **MTTR & Failure Frequency**: Derived consistently across the tree, so frequency × MTTR always matches the SLA.
+*   **RTO & RPO**: Aggregates Recovery Time and Recovery Point Objectives across the tree and checks them against targets.
 
 ### 2. Probabilistic Risk Analysis
-*   **Monte Carlo Simulation**: Executes 10,000 yearly iterations using Poisson arrival rates for incidents and Exponential distributions for recovery durations.
-*   **Distribution Histogram**: Visualizes the "long-tail" risk of your architecture, showing the probability of "Bad Year" (P95) and "Calamity" (P99) scenarios.
-*   **Sensitivity-Based Bottlenecks**: Automatically identifies the "System Bottleneck"—the specific node where improvements would yield the highest gain in total system health.
+*   **Monte Carlo Simulation**: 10,000 simulated years in a background worker (Poisson incidents, exponential recoveries), reproducible from the shown seed.
+*   **Distribution Histogram**: The long-tail risk of your architecture, including "bad year" (P95) and "calamity" (P99) outcomes.
+*   **Incident-free Chance**: The probability of a week, month, quarter, year or custom window without any incident.
+*   **Improvement Levers**: Ranks every item by the downtime saved if it never failed; the top one is marked as the system bottleneck.
+*   **Model Checks**: Flags setups that are valid but probably unintended, such as replicas that must all be up or redundancy defeated by a shared domain.
 
 ### 3. Chaos & Simulation
-*   **Chaos Mode**: An interactive failure injection environment.
-*   **Granular Failure Magnitude**: For redundant components, specify exactly how many replicas to "Kill" to observe system degradation.
-*   **Blast Radius Heatmap**: A visual overlay that colors nodes based on the percentage of total system SLA lost if they fail.
-*   **Real-time Error Budgeting**: Tracks consumed downtime against allowed duration for specific periods (Day/Month/Year).
+*   **Chaos Mode**: Interactive failure injection, including how many replicas of a redundant item to kill.
+*   **Blast Radius Heatmap**: Colors nodes by the share of system SLA lost if they fail.
+*   **Error Budgeting**: Tracks consumed downtime against the allowed downtime for a day, month or year.
 
-### 4. Interactive Visualizations
-*   **Infrastructure Topology**: Toggle between a hierarchical list editor and a visual infrastructure diagram (Horizontal/Vertical).
-*   **Technical Annotations**: Persistent technical notes and assumptions visible directly on the architecture nodes.
-*   **Cloud SLA Catalog**: Searchable database of published SLAs from AWS, Azure, GCP, and Cloudflare to pre-populate models.
+### 4. Working with Models
+*   **Infrastructure Topology**: Switch between the list editor and a horizontal or vertical topology diagram.
+*   **Undo & Autosave**: Undo/redo every change; the model is saved in your browser.
+*   **Export**: Configuration (JSON), report (Markdown or PDF) and topology diagram (SVG or PNG).
+*   **Templates**: Common architectures to start from, plus a non-IT example: a metal concert.
+*   **Cloud SLA Catalog**: Searchable published SLAs from AWS, Azure, GCP and Cloudflare.
+*   **Technical Annotations**: Notes and assumptions on any item, shown in the editor, topology and exports.
 
 ## Technical Foundations
 
-**slayer** is built with **Next.js 16**, **Tailwind CSS 4**, and **Lucide React**. It utilizes several sophisticated mathematical models:
-*   **Probability**: Exact success probability via dynamic programming for non-identical component SLAs in K-of-N groups.
-*   **Stochastics**: Poisson arrival rate modeling for incident frequency.
-*   **Simulation**: 10,000-run Monte Carlo engine with debounced real-time updates.
+**slayer** is built with **Next.js 16**, **Tailwind CSS 4**, and **Lucide React**. It uses:
+*   **Probability**: Exact k-of-n success probabilities via dynamic programming, also for non-identical availabilities.
+*   **Common-cause failures**: Conditioning on shared failure domain states, and the beta-factor model for replicas.
+*   **Failure frequency**: The Birnbaum importance formula for independent repairable components, which keeps MTTR consistent with availability.
+*   **Simulation**: A seedable Monte Carlo engine (Poisson arrivals, exponential recoveries) running in a Web Worker.
 
 ## Getting Started
 
@@ -58,7 +65,7 @@ npm run build
 ```
 
 ### Zero-Backend Persistence
-**slayer** uses a "Shareable State" model. Your entire infrastructure design is encoded into a **Base64 URL hash**. You can share your model simply by copying the link—no database required. It also supports local **JSON Export/Import** for file-based configuration management.
+**slayer** has no backend. Your model is autosaved in your browser, **Share** copies a link with the whole model compressed into the URL, and **Export/Import** handles JSON files.
 
 ## License
 
