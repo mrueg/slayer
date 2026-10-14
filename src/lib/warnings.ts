@@ -12,11 +12,10 @@ const allOf = (count: number, noun: string) => (count === 2 ? `Both ${noun}` : `
 
 const activeChildren = (item: SLAItem) => (item.children || []).filter(child => !child.isOptional);
 
-/**
- * Flags configurations that are valid but probably not what the author
- * meant, e.g. replicas that add no redundancy or parallel groups that
- * behave like series groups.
- */
+// Children a parallel group needs up; rounded down like the calculator does
+const requiredChildren = (item: SLAItem, count: number) =>
+  Math.min(Math.max(Math.floor(item.minChildrenRequired || 1), 1), count);
+
 /**
  * Failure domains whose failure alone takes the item down: its own tags, plus
  * any domain that hits more children than the group can lose.
@@ -26,9 +25,7 @@ const coveringDomains = (item: SLAItem): Set<string> => {
   if (item.type !== 'group') return covering;
   const children = activeChildren(item);
   if (children.length === 0) return covering;
-  const required = item.config === 'parallel'
-    ? Math.min(Math.max(item.minChildrenRequired || 1, 1), children.length)
-    : children.length;
+  const required = item.config === 'parallel' ? requiredChildren(item, children.length) : children.length;
   const tolerated = children.length - required;
   const hits = new Map<string, number>();
   for (const child of children) {
@@ -38,11 +35,17 @@ const coveringDomains = (item: SLAItem): Set<string> => {
   return covering;
 };
 
+/**
+ * Flags configurations that are valid but probably not what the author
+ * meant, e.g. replicas that add no redundancy or parallel groups that
+ * behave like series groups.
+ */
 export const getModelWarnings = (root: SLAItem): ModelWarning[] => {
   const warnings: ModelWarning[] = [];
   const domainNames = new Map((root.failureDomains || []).map(d => [d.id, d.name || '(unnamed)']));
 
-  const visit = (item: SLAItem) => {
+  // `inherited`: domains an ancestor is tagged with; the whole subtree already fails with them
+  const visit = (item: SLAItem, inherited: ReadonlySet<string>) => {
     if (item.isOptional) return;
     const add = (severity: ModelWarning['severity'], message: string) =>
       warnings.push({ itemId: item.id, itemName: item.name || '(unnamed)', severity, message });
@@ -62,7 +65,7 @@ export const getModelWarnings = (root: SLAItem): ModelWarning[] => {
       if (children.length === 0) {
         add('warning', 'Group has no critical children and counts as 100% available.');
       } else if (item.config === 'parallel') {
-        const k = item.minChildrenRequired || 1;
+        const k = requiredChildren(item, children.length);
         if (children.length > 1 && k >= children.length) {
           add('warning', `${allOf(children.length, 'children')} must be up, so this parallel group behaves like a series group.`);
         }
@@ -72,7 +75,7 @@ export const getModelWarnings = (root: SLAItem): ModelWarning[] => {
         if (k < children.length) {
           const own = new Set(item.domains || []);
           for (const domain of coveringDomains(item)) {
-            if (own.has(domain) || !domainNames.has(domain)) continue;
+            if (own.has(domain) || inherited.has(domain) || !domainNames.has(domain)) continue;
             add('warning', `A failure of ${domainNames.get(domain)} takes down this whole group: its redundant paths share that domain.`);
           }
         }
@@ -88,10 +91,11 @@ export const getModelWarnings = (root: SLAItem): ModelWarning[] => {
           }
         }
       }
-      children.forEach(visit);
+      const childInherited = new Set([...inherited, ...(item.domains || [])]);
+      children.forEach(child => visit(child, childInherited));
     }
   };
 
-  visit(root);
+  visit(root, new Set());
   return warnings;
 };
