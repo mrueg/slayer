@@ -78,7 +78,7 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
               {entry && (
                 <p className="text-[10px] text-slate-500 dark:text-slate-400">
                   {entry.itemCount === 0 ? (
-                    'No items tagged yet.'
+                    'No critical items tagged.'
                   ) : (
                     <>
                       {entry.itemCount} item{entry.itemCount === 1 ? '' : 's'} ·{' '}
