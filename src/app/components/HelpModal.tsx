@@ -14,7 +14,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         icon: <Calculator className="w-4 h-4" />,
         content: [
           { label: "Series Availability", text: "The product of the children's availabilities. The group fails if any child fails." },
-          { label: "Parallel & Failover", text: "With Nodes UP = 1 the first child is the primary: Failover % only matters when the primary fails, and the group fails if the switch fails or every standby is down too. With Nodes UP > 1 the group is a k-of-n pool behind the switch." },
+          { label: "Parallel & Failover", text: "With Nodes UP = 1 the first child is the primary: Failover % only matters when the primary fails, and the group fails if the switch fails or every standby is down too. Switch min adds that much downtime to every successful failover. With Nodes UP > 1 the group is a k-of-n pool behind the switch." },
           { label: "K-out-of-N", text: "Replicas with Min UP (and parallel groups with Nodes UP) use dynamic programming for the exact probability that enough of them are up, even with different availabilities." },
           { label: "Failure Frequency & MTTR", text: "Each component fails (1 − SLA) × year / MTTR times a year. Frequencies are combined with the Birnbaum importance formula, so frequency × MTTR always matches the SLA and the simulation agrees with the headline number." },
           { label: "Shared Failure Domains", text: "Zones, regions or providers with their own SLA and MTTR. Items tagged with a domain fail together when it fails; availability is computed by conditioning on which domains are up." },
@@ -34,7 +34,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           { label: "Improvement Levers", text: "Ranks every item by the yearly downtime saved if it never failed. The top item gets the System Bottleneck badge." },
           { label: "Failure Domain Impact", text: "Per domain: how many items it holds, the downtime it causes per year and the system SLA while it is down." },
           { label: "Blast Radius Heatmap", text: "Colors nodes by the share of system SLA lost if they fail." },
-          { label: "Model Checks", text: "Flags valid but likely unintended setups: replicas that must all be up, parallel groups that behave like series, empty groups, a weak primary, redundancy defeated by a shared domain and 100% components." },
+          { label: "Model Checks", text: "Flags valid but likely unintended setups: replicas that must all be up, parallel groups that behave like series, empty groups, a weak primary, failover slower than repair, redundancy defeated by a shared domain and 100% components." },
           { label: "Error Budgeting", text: "Tracks consumed downtime against the allowed downtime for a day, month or year at the system SLA." }
         ]
       }
