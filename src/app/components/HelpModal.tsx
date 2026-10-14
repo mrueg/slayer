@@ -48,7 +48,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           { label: "Sharing", text: "Share copies a compressed link containing the whole model; no server involved. Opening a link loads the model and then removes it from the address bar, so later edits survive a reload." },
           { label: "Export", text: "Download the configuration as JSON, a report as Markdown or PDF (via the print dialog), or the topology as an SVG or PNG diagram." },
           { label: "Chaos Mode", text: "Inject failures by hand; for replicated items choose how many replicas to kill. Leaving chaos mode restores everything." },
-          { label: "Templates", text: "Ready-made architectures to start from, including a non-IT example: a metal concert that tries to make it through the night." },
+          { label: "Examples", text: "Ready-made models to start from, including a non-IT one: a metal concert that tries to make it through the night." },
           { label: "Cloud SLA Catalog", text: "Searchable published SLAs from AWS, Azure, GCP and Cloudflare to pre-fill a component." },
           { label: "Notes & Theme", text: "Notes on any item show in the list, topology and exports. Dark mode follows your system until you pick one." }
         ]
