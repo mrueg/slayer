@@ -31,7 +31,7 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         content: [
           { label: "Monte Carlo Engine", text: "Simulates 10,000 years in a background worker: incidents arrive as a Poisson process and recoveries are exponential. Each run shows its seed, so it can be reproduced." },
           { label: "Incident-free Chance", text: "The probability of getting through a week, month, quarter, year or a custom window without any incident, from R(t) = exp(−λt)." },
-          { label: "Improvement Levers", text: "Ranks every item by the yearly downtime saved if it never failed. The top item gets the System Bottleneck badge." },
+          { label: "Improvement Levers", text: "Ranks every item and failure domain by the yearly downtime saved if it never failed. The top entry gets the System Bottleneck badge; a domain shows it in the Failure Domains panel." },
           { label: "Failure Domain Impact", text: "Per domain: how many items it holds, the downtime it causes per year and the system SLA while it is down." },
           { label: "Blast Radius Heatmap", text: "Colors nodes by the share of system SLA lost if they fail." },
           { label: "Model Checks", text: "Flags valid but likely unintended setups: replicas that must all be up, parallel groups that behave like series, empty groups, a weak primary, failover slower than repair, redundancy defeated by a shared domain and 100% components." },

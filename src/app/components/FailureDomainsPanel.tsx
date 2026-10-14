@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MapPinned, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, MapPinned, Plus, Trash2 } from 'lucide-react';
 import { DomainImpact, FailureDomain, formatDuration, formatSLAPercentage, getDomainMttr } from '@/lib/sla-calculator';
 import { MAX_FAILURE_DOMAINS } from '@/lib/domains';
 import { parseNumberInput } from '@/lib/number';
@@ -9,6 +9,7 @@ import { parseNumberInput } from '@/lib/number';
 interface FailureDomainsPanelProps {
   domains: FailureDomain[];
   impact: DomainImpact[];
+  bottleneckIds: string[];
   onAdd: () => void;
   onUpdate: (id: string, updates: Partial<FailureDomain>) => void;
   onRemove: (id: string) => void;
@@ -16,7 +17,7 @@ interface FailureDomainsPanelProps {
 
 const inputClass = "w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono text-xs dark:text-slate-200";
 
-const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impact, onAdd, onUpdate, onRemove }) => {
+const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impact, bottleneckIds, onAdd, onUpdate, onRemove }) => {
   const impactById = new Map(impact.map(entry => [entry.id, entry]));
   const atLimit = domains.length >= MAX_FAILURE_DOMAINS;
 
@@ -43,6 +44,12 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
                   className="flex-1 min-w-0 bg-transparent border-b border-slate-200 dark:border-slate-700 py-0.5 outline-none focus:border-blue-500 text-sm font-semibold text-slate-700 dark:text-slate-200"
                   aria-label="Domain name"
                 />
+                {bottleneckIds.includes(domain.id) && (
+                  <span className="shrink-0 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 shadow-md">
+                    <AlertTriangle className="w-2 h-2" />
+                    SYSTEM BOTTLENECK
+                  </span>
+                )}
                 <button
                   onClick={() => onRemove(domain.id)}
                   className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"

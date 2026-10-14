@@ -21,7 +21,7 @@
 *   **Monte Carlo Simulation**: 10,000 simulated years in a background worker (Poisson incidents, exponential recoveries), reproducible from the shown seed.
 *   **Distribution Histogram**: The long-tail risk of your architecture, including "bad year" (P95) and "calamity" (P99) outcomes.
 *   **Incident-free Chance**: The probability of a week, month, quarter, year or custom window without any incident.
-*   **Improvement Levers**: Ranks every item by the downtime saved if it never failed; the top one is marked as the system bottleneck.
+*   **Improvement Levers**: Ranks every item and failure domain by the downtime saved if it never failed; the top one is marked as the system bottleneck.
 *   **Model Checks**: Flags setups that are valid but probably unintended, such as replicas that must all be up or redundancy defeated by a shared domain.
 
 ### 3. Chaos & Simulation

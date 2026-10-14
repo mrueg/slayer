@@ -342,11 +342,12 @@ export default function ReliabilityModeling() {
     drMetrics
   } = useMemo(() => {
     const sla = calculateSLA(root);
+    const sensitivityRanking = getSensitivityRanking(root);
     return {
       compositeSla: sla,
       downtime: getDowntime(sla),
-      bottleneck: findBottleneck(root),
-      sensitivityRanking: getSensitivityRanking(root),
+      bottleneck: findBottleneck(root, sensitivityRanking),
+      sensitivityRanking,
       modelWarnings: getModelWarnings(root),
       domainImpact: getDomainImpact(root),
       reliability: calculateReliability(root),
@@ -787,6 +788,7 @@ export default function ReliabilityModeling() {
             <FailureDomainsPanel
               domains={failureDomains}
               impact={domainImpact}
+              bottleneckIds={bottleneck.ids}
               onAdd={handleAddDomain}
               onUpdate={handleUpdateDomain}
               onRemove={handleRemoveDomain}

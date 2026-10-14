@@ -376,12 +376,15 @@ const assignDomainOwners = (root: SLAItem, domains: FailureDomain[]): Map<SLAIte
 const evaluateSystem = (root: SLAItem, overrides: Overrides = {}, domains = root.failureDomains || []): NodeMetrics =>
   evaluate(root, { ...overrides, domainOwners: assignDomainOwners(root, domains) });
 
+/** SLA of the whole model in percent, including the failure domains defined on its root. */
+export const calculateSLA = (root: SLAItem): number =>
+  evaluateSystem(root).availability * 100;
+
 /**
- * SLA of an item in percent. Failure domains default to the ones defined on
- * the item itself (the root); pass the root's domains when evaluating a
- * subtree.
+ * SLA in percent of one item inside a model. Failure domains are defined on
+ * the root only, so the item alone does not know them: pass the root's.
  */
-export const calculateSLA = (item: SLAItem, domains?: FailureDomain[]): number =>
+export const calculateItemSLA = (item: SLAItem, domains: FailureDomain[]): number =>
   evaluateSystem(item, {}, domains).availability * 100;
 
 /**
@@ -437,23 +440,21 @@ export const calculateDRMetrics = (item: SLAItem): DRResult => {
   };
 };
 
-export const calculateReliability = (item: SLAItem, domains?: FailureDomain[]): ReliabilityResult => {
-  const { availability, frequency } = evaluateSystem(item, {}, domains);
+const toReliability = ({ availability, frequency }: NodeMetrics): ReliabilityResult => {
   const mttr = frequency > 0 ? ((1 - availability) * YEAR_MINUTES) / frequency : 0;
   return { sla: availability * 100, frequency, mttr };
 };
+
+/** Reliability of the whole model, including the failure domains defined on its root. */
+export const calculateReliability = (root: SLAItem): ReliabilityResult => toReliability(evaluateSystem(root));
+
+/** Reliability of an item on its own, leaving failure domains out. */
+const calculateReliabilityWithoutDomains = (item: SLAItem): ReliabilityResult => toReliability(evaluateSystem(item, {}, []));
 
 export interface BottleneckResult {
   ids: string[];
   impact: number;
 }
-
-/**
- * Calculates the SLA of an item while treating a specific ID as 100% available.
- * Used for sensitivity analysis.
- */
-const calculateSLAWithOverride = (item: SLAItem, overrideId: string): number =>
-  evaluateSystem(item, { forceUpId: overrideId }).availability * 100;
 
 /**
  * Calculates the SLA of an item while treating a specific ID as 0% available.
@@ -474,77 +475,64 @@ const getSerialMap = (item: SLAItem, parent?: SLAItem, map: Record<string, boole
   return map;
 };
 
-export const findBottleneck = (root: SLAItem): BottleneckResult => {
-  const currentRootSla = calculateSLA(root);
-  const allItems = getAllItems(root);
-  const serialMap = getSerialMap(root);
-  
-  let maxImpact = -1;
-  let results: { id: string, individualSla: number }[] = [];
-
-  const candidates = allItems.length > 1 
-    ? allItems.filter(item => item.id !== root.id)
-    : allItems;
-
-  for (const item of candidates) {
-    const isTotalFailure = (item.failedReplicas || 0) >= (item.replicas || 1);
-    if (isTotalFailure && !serialMap[item.id]) continue;
-
-    const slaWithImprovement = calculateSLAWithOverride(root, item.id);
-    const impact = slaWithImprovement - currentRootSla;
-    const individualSla = calculateSLA(item);
-    
-    const isSignificantImprovement = impact > maxImpact + 1e-12;
-    const isEquivalentImpact = Math.abs(impact - maxImpact) < 1e-12;
-
-    if (isSignificantImprovement) {
-      maxImpact = impact;
-      results = [{ id: item.id, individualSla }];
-    } else if (isEquivalentImpact && impact > 0) {
-      results.push({ id: item.id, individualSla });
-    }
-  }
-
-  if (results.length > 1) {
-    const lowestSla = Math.min(...results.map(r => r.individualSla));
-    return {
-      ids: results.filter(r => r.individualSla <= lowestSla + 1e-12).map(r => r.id),
-      impact: maxImpact
-    };
-  }
-
-  return { ids: results.map(r => r.id), impact: maxImpact };
-};
-
 export interface SensitivityEntry {
   id: string;
   name: string;
-  type: SLAItem['type'];
-  slaGain: number; // percentage points gained if this item were 100% available
+  type: SLAItem['type'] | 'domain';
+  slaGain: number; // percentage points gained if this item or domain were 100% available
   downtimeSavedPerYear: number; // minutes
 }
 
 /**
- * Ranks every item by how much the system SLA would improve if that item
- * never failed, i.e. where reliability work pays off most. Items with no
- * effect (optional, or fully masked by redundancy) are omitted.
+ * Ranks every item and failure domain by how much the system SLA would
+ * improve if it never failed, i.e. where reliability work pays off most.
+ * Entries with no effect (optional, unused, or fully masked by redundancy)
+ * are omitted.
  */
 export const getSensitivityRanking = (root: SLAItem): SensitivityEntry[] => {
   const currentSla = calculateSLA(root);
-  return getAllItems(root)
+  const domains = root.failureDomains || [];
+  const entry = (id: string, name: string, type: SensitivityEntry['type'], improvedSla: number): SensitivityEntry => {
+    const slaGain = improvedSla - currentSla;
+    return { id, name, type, slaGain, downtimeSavedPerYear: (slaGain / 100) * YEAR_MINUTES };
+  };
+  const items = getAllItems(root)
     .filter(item => item.id !== root.id)
-    .map(item => {
-      const slaGain = calculateSLAWithOverride(root, item.id) - currentSla;
-      return {
-        id: item.id,
-        name: item.name,
-        type: item.type,
-        slaGain,
-        downtimeSavedPerYear: (slaGain / 100) * YEAR_MINUTES,
-      };
-    })
+    .map(item => entry(item.id, item.name, item.type, evaluateSystem(root, { forceUpId: item.id }).availability * 100));
+  const domainEntries = domains.map(domain => entry(domain.id, domain.name, 'domain',
+    evaluateSystem(root, {}, domains.map(d => (d.id === domain.id ? { ...d, sla: 100 } : d))).availability * 100));
+  return [...items, ...domainEntries]
     .filter(entry => entry.slaGain > 1e-12)
     .sort((a, b) => b.slaGain - a.slaGain);
+};
+
+/**
+ * The top entries of the sensitivity ranking: the items or failure domains
+ * whose improvement helps the system most. Ties go to the least available
+ * ones. Items killed in chaos mode only count where they break the system on
+ * their own.
+ */
+export const findBottleneck = (root: SLAItem, ranking = getSensitivityRanking(root)): BottleneckResult => {
+  if (!root.children?.length) return { ids: [root.id], impact: 100 - calculateSLA(root) };
+
+  const domains = root.failureDomains || [];
+  const items = new Map(getAllItems(root).map(item => [item.id, item]));
+  const serialMap = getSerialMap(root);
+  const candidates = ranking.filter(entry => {
+    const item = items.get(entry.id);
+    return !item || (item.failedReplicas || 0) < (item.replicas || 1) || serialMap[item.id];
+  });
+  if (candidates.length === 0) return { ids: [], impact: 0 };
+
+  const impact = candidates[0].slaGain;
+  const tied = candidates.filter(entry => impact - entry.slaGain < 1e-12);
+  const ownSla = (id: string) => {
+    const item = items.get(id);
+    return item ? calculateItemSLA(item, domains) : domains.find(d => d.id === id)!.sla;
+  };
+  const slas = tied.map(entry => ownSla(entry.id));
+  const lowest = Math.min(...slas);
+  return { ids: tied.filter((_, i) => slas[i] <= lowest + 1e-12).map(entry => entry.id), impact };
 };
 
 export const getBlastRadiusMap = (root: SLAItem): Record<string, number> => {
@@ -598,7 +586,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
 
   const steps: CalculationStep[] = [];
   // Independent failures only; shared failure domains are added as a final step
-  const rel = calculateReliability(item, []);
+  const rel = calculateReliabilityWithoutDomains(item);
   const dr = calculateDRMetrics(item);
 
   if (item.type === 'component') {
@@ -654,7 +642,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
     } else {
       children.forEach(child => steps.push(...getCalculationSteps(child)));
       
-      const childRels = activeChildren.map(child => calculateReliability(child));
+      const childRels = activeChildren.map(calculateReliabilityWithoutDomains);
       const k = getMinChildrenRequired(item, activeChildren.length);
       
       if (item.config === 'series') {
