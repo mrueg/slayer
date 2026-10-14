@@ -229,6 +229,10 @@ const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
 const getAllItems = (item: SLAItem): SLAItem[] =>
   [item, ...(item.children || []).flatMap(getAllItems)];
 
+/** Items that take part in the calculation: everything except optional items and their subtrees. */
+const getCriticalItems = (item: SLAItem): SLAItem[] =>
+  item.isOptional ? [] : [item, ...getActiveChildren(item).flatMap(getCriticalItems)];
+
 // Domain states less likely than this are skipped; their effect is far below display precision
 const DOMAIN_STATE_EPSILON = 1e-15;
 const DEFAULT_DOMAIN_MTTR = 120;
@@ -240,7 +244,8 @@ export const getDomainMttr = (domain: FailureDomain): number =>
 /** Domains that are defined and referenced by at least one item. */
 const getRelevantDomains = (root: SLAItem, domains: FailureDomain[]): FailureDomain[] => {
   if (domains.length === 0) return [];
-  const used = new Set(getAllItems(root).flatMap(item => item.domains || []));
+  // Tags on optional items cannot affect the result, so they don't count
+  const used = new Set(getCriticalItems(root).flatMap(item => item.domains || []));
   return domains.filter(domain => used.has(domain.id));
 };
 
@@ -632,7 +637,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
 export interface DomainImpact {
   id: string;
   name: string;
-  itemCount: number; // items tagged with the domain
+  itemCount: number; // critical (non-optional) items tagged with the domain
   downtimePerYear: number; // minutes of system downtime caused by the domain
   slaWhileDown: number; // system SLA while the domain is down
 }
@@ -640,7 +645,7 @@ export interface DomainImpact {
 /** How much each failure domain costs the system, and what is left while it is down. */
 export const getDomainImpact = (root: SLAItem): DomainImpact[] => {
   const domains = root.failureDomains || [];
-  const items = getAllItems(root);
+  const items = getCriticalItems(root);
   const current = evaluateSystem(root).availability;
   return domains.map(domain => {
     const withDomain = (sla: number) => evaluateSystem(root, {}, domains.map(d => (d.id === domain.id ? { ...d, sla } : d))).availability;
