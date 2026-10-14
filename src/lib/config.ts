@@ -13,6 +13,7 @@ const RANGES: Partial<Record<keyof SLAItem, [number, number]>> = {
   downtimeValue: [0, Infinity],
   replicas: [1, 99],
   minReplicasRequired: [1, 99],
+  commonCause: [0, 100],
   minChildrenRequired: [1, Infinity],
   failedReplicas: [0, 99],
 };
@@ -106,6 +107,7 @@ export const parseConfig = (input: unknown): SLAItem => {
     if (raw.isOptional === true) item.isOptional = true;
 
     const numericKeys = [
+      'commonCause',
       'mttr', 'sla', 'replicas', 'minReplicasRequired', 'minChildrenRequired',
       'failoverSla', 'failedReplicas', 'downtimeValue', 'rto', 'rpo',
     ] as const;
