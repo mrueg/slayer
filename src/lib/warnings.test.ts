@@ -101,3 +101,11 @@ describe('failure domain checks', () => {
     expect(getModelWarnings({ ...nested, domains: ['az1'] })).toEqual([]);
   });
 });
+
+describe('failover time check', () => {
+  it('flags switchovers slower than repairing the primary', () => {
+    const root = group('root', 'parallel', [component('p', 99.9, { mttr: 10 }), component('s', 99.9)], { failoverTime: 15 });
+    expect(messagesFor(root, 'root')[0]).toBe('Failing over (15m) takes at least as long as repairing the primary (10m), so the standby never shortens an outage.');
+    expect(getModelWarnings({ ...root, failoverTime: 5 })).toEqual([]);
+  });
+});

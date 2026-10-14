@@ -14,6 +14,7 @@ export const normalizeItem = (item: SLAItem): SLAItem => {
 
   if (next.sla !== undefined) next.sla = clamp(next.sla, 0, 100);
   if (next.failoverSla !== undefined) next.failoverSla = clamp(next.failoverSla, 0, 100);
+  if (next.failoverTime !== undefined) next.failoverTime = Math.max(0, next.failoverTime);
   if (next.mttr !== undefined) next.mttr = Math.max(1, next.mttr);
   if (next.rto !== undefined) next.rto = Math.max(0, next.rto);
   if (next.rpo !== undefined) next.rpo = Math.max(0, next.rpo);

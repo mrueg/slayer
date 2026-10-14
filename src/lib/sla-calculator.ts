@@ -27,6 +27,7 @@ export interface SLAItem {
   config?: Configuration; // For groups
   minChildrenRequired?: number; // For groups: min up children
   failoverSla?: number; // Failover reliability for parallel groups
+  failoverTime?: number; // Minutes of downtime per successful failover (parallel 1-of-n)
   isOptional?: boolean; // If true, this item doesn't count against the total SLA
   failedReplicas?: number; // Number of replicas that are currently DOWN (Chaos Mode)
   children?: SLAItem[]; // For groups
@@ -188,6 +189,18 @@ const evaluate = (item: SLAItem, overrides: Overrides = {}): NodeMetrics => {
     });
 
     base = { availability, frequency };
+
+    // Failover is not instant: every successful switch from the primary to a
+    // standby is an outage of failoverTime minutes on top of the above.
+    const switchover = item.failoverTime ?? 0;
+    if (item.config === 'parallel' && switchover > 0 && probabilities.length > 1
+      && getMinChildrenRequired(item, probabilities.length) === 1) {
+      const switchReliability = clamp((item.failoverSla ?? 100) / 100, 0, 1);
+      const standbyAvailable = 1 - probabilities.slice(1).reduce((acc, p) => acc * (1 - p), 1);
+      const failovers = childMetrics[0].frequency * switchReliability * standbyAvailable;
+      const lost = Math.min(availability, (failovers * switchover) / YEAR_MINUTES);
+      base = { availability: availability - lost, frequency: frequency + failovers };
+    }
   }
 
   // Apply redundancy (replicas) to both components and groups
@@ -570,7 +583,7 @@ export const getCalculationSteps = (item: SLAItem): CalculationStep[] => {
           type: item.type,
           formula: `${k}-out-of-${activeChildren.length} Redundancy`,
           explanation: `Parallel: Minimum time to recover any path (Min RTO) and freshest data path (Min RPO).`,
-          inputValues: childRels.map(r => `${formatSLAPercentage(r.sla)}%`),
+          inputValues: [...childRels.map(r => `${formatSLAPercentage(r.sla)}%`), ...(item.failoverTime ? [`Switchover: ${formatDuration(item.failoverTime)}`] : [])],
           result: rel.sla,
           mttrResult: rel.mttr,
           frequencyResult: rel.frequency,
