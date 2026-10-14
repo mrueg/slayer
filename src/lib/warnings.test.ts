@@ -109,3 +109,35 @@ describe('failover time check', () => {
     expect(getModelWarnings({ ...root, failoverTime: 5 })).toEqual([]);
   });
 });
+
+describe('shared domain check edge cases', () => {
+  const domains = [{ id: 'az1', name: 'us-east-1a', sla: 99.99 }, { id: 'az2', name: 'us-east-1b', sla: 99.99 }];
+
+  it('stays quiet when an ancestor is already tagged with the domain', () => {
+    const root = group('root', 'series', [
+      group('rg', 'series', [
+        group('pool', 'parallel', [component('a', 99.9, { domains: ['az1'] }), component('b', 99.9, { domains: ['az1'] })]),
+      ], { domains: ['az1'] }),
+    ], { failureDomains: domains });
+    expect(getModelWarnings(root)).toEqual([]);
+  });
+
+  it('still warns for a different domain than the ancestor one', () => {
+    const root = group('root', 'series', [
+      group('rg', 'series', [
+        group('pool', 'parallel', [component('a', 99.9, { domains: ['az2'] }), component('b', 99.9, { domains: ['az2'] })]),
+      ], { domains: ['az1'] }),
+    ], { failureDomains: domains });
+    expect(messagesFor(root, 'pool')[0]).toContain('us-east-1b');
+  });
+
+  it('rounds fractional Nodes UP down like the calculator', () => {
+    const root = group('root', 'parallel', [
+      component('a', 99.9, { domains: ['az1'] }),
+      component('b', 99.9, { domains: ['az1'] }),
+      component('c', 99.9, { domains: ['az2'] }),
+    ], { failureDomains: domains, minChildrenRequired: 1.5 });
+    // Calculator uses 1-of-3: losing az1 leaves c up
+    expect(getModelWarnings(root)).toEqual([]);
+  });
+});
