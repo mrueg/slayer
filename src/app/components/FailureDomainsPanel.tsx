@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { AlertTriangle, MapPinned, Plus, Trash2 } from 'lucide-react';
+import SidebarSection from '@/app/components/SidebarSection';
 import { DomainImpact, FailureDomain, formatDuration, formatSLAPercentage, getDomainMttr } from '@/lib/sla-calculator';
 import { MAX_FAILURE_DOMAINS } from '@/lib/domains';
 import { parseNumberInput } from '@/lib/number';
@@ -22,11 +23,12 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
   const atLimit = domains.length >= MAX_FAILURE_DOMAINS;
 
   return (
-    <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
-      <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
-        <MapPinned className="w-4 h-4 text-violet-500" />
-        <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Failure Domains</h3>
-      </div>
+    <SidebarSection
+      id="domains"
+      title="Failure Domains"
+      icon={<MapPinned className="w-4 h-4 text-violet-500" />}
+      summary={domains.length || undefined}
+    >
       <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
         Shared infrastructure such as a zone, region or provider. Tag items with a domain and they fail together when it fails.
       </p>
@@ -111,7 +113,7 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
         <Plus className="w-3.5 h-3.5" />
         {atLimit ? `Up to ${MAX_FAILURE_DOMAINS} failure domains` : 'Add failure domain'}
       </button>
-    </section>
+    </SidebarSection>
   );
 };
 

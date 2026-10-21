@@ -2,6 +2,7 @@
 
 import React, { useId } from 'react';
 import { Activity, BarChart3, Dices, Play, RotateCw, ShieldCheck } from 'lucide-react';
+import SidebarSection from '@/app/components/SidebarSection';
 import { DowntimePeriod, MonteCarloResult, formatDuration } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
 
@@ -59,11 +60,12 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
   const { result } = simulation;
   const id = useId();
   return (
-    <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-8">
-      <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
-        <Activity className="w-4 h-4 text-blue-500" />
-        <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Reliability Analysis</h3>
-      </div>
+    <SidebarSection
+      id="analysis"
+      title="Reliability Analysis"
+      icon={<Activity className="w-4 h-4 text-blue-500" />}
+      bodyClassName="space-y-8"
+    >
 
       {/* Monte Carlo Simulation */}
       <div className="space-y-4">
@@ -293,6 +295,6 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
           </div>
         </div>
       </div>
-    </section>
+    </SidebarSection>
   );
 }

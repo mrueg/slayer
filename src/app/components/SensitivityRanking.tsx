@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
+import SidebarSection from '@/app/components/SidebarSection';
 import { SensitivityEntry, formatDuration } from '@/lib/sla-calculator';
 
 const COLLAPSED_COUNT = 5;
@@ -12,11 +13,11 @@ const SensitivityRanking: React.FC<{ ranking: SensitivityEntry[] }> = ({ ranking
   const max = ranking[0]?.downtimeSavedPerYear || 1;
 
   return (
-    <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
-      <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
-        <TrendingUp className="w-4 h-4 text-emerald-500" />
-        <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Improvement Levers</h3>
-      </div>
+    <SidebarSection
+      id="levers"
+      title="Improvement Levers"
+      icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
+    >
       <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
         Yearly downtime saved if the item or failure domain never failed. Work on the top entries first.
       </p>
@@ -56,7 +57,7 @@ const SensitivityRanking: React.FC<{ ranking: SensitivityEntry[] }> = ({ ranking
           {expanded ? 'Show fewer' : `Show all ${ranking.length}`}
         </button>
       )}
-    </section>
+    </SidebarSection>
   );
 };
 
