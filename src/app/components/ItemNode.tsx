@@ -151,7 +151,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center md:justify-end gap-2">
               <button
                 onClick={() => onUpdate(item.id, { isOptional: !item.isOptional })}
                 className={cn(
