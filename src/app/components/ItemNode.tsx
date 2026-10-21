@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import {
   Plus,
   Trash2,
@@ -13,8 +13,7 @@ import {
   ShieldAlert,
   StickyNote,
   Skull,
-  ChevronRight,
-  SlidersHorizontal
+  ChevronRight
 } from 'lucide-react';
 import { SLAItem, FailureDomain, slaFromDowntime, formatSLAPercentage, DowntimePeriod, InputMode } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
@@ -40,7 +39,8 @@ interface ItemNodeProps {
   itemSlas: Record<string, number>;
   collapsedIds: ReadonlySet<string>;
   onToggleCollapsed: (id: string) => void;
-  // Extra controls at the start of a group's header (used for the root's collapse/expand all)
+  showRecoveryFields: boolean;
+  // Extra controls after a group's name and SLA (used for the root's view toggles)
   headerActions?: React.ReactNode;
 }
 
@@ -62,13 +62,13 @@ const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => 
   );
 };
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [], itemSlas, collapsedIds, onToggleCollapsed, headerActions }) => {
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [], itemSlas, collapsedIds, onToggleCollapsed, showRecoveryFields, headerActions }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
   const [showNotes, setShowNotes] = useState(!!item.notes);
   const [showKillModal, setShowKillModal] = useState(false);
-  const [showMore, setShowMore] = useState(false);
+  const fieldId = useId();
   const isCollapsed = isGroup && collapsedIds.has(item.id);
   const childCount = item.children?.length || 0;
   
@@ -76,12 +76,6 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
   const replicas = item.replicas || 1;
   const isDown = failed >= replicas;
   const isDegraded = failed > 0 && failed < replicas;
-  // Values behind the component's "More" toggle, summarised so hiding them doesn't hide that they're set
-  const hiddenValues = [
-    item.rto !== undefined && `RTO ${item.rto} min`,
-    item.rpo !== undefined && `RPO ${item.rpo} min`,
-    replicas > 1 && (item.commonCause ?? 0) > 0 && `Shared ${item.commonCause}%`,
-  ].filter((value): value is string => Boolean(value));
 
   const handleModeToggle = (newMode: InputMode) => {
     onUpdate(item.id, { inputMode: newMode });
@@ -182,9 +176,9 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   Optional
                 </span>
               )}
+              {headerActions}
             </div>
             <div className="flex flex-wrap items-center md:justify-end gap-2">
-              {headerActions}
               <button
                 onClick={() => onUpdate(item.id, { isOptional: !item.isOptional })}
                 className={cn(
@@ -357,12 +351,16 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               >
                 <StickyNote className="w-4 h-4" />
               </button>
-              <button
-                onClick={() => onRemove(item.id)}
-                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {/* The root can't be removed (use File → Clear instead) */}
+              {depth > 0 && (
+                <button
+                  onClick={() => onRemove(item.id)}
+                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  aria-label={`Remove ${item.name}`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
           {showNotes && !isCollapsed && (
@@ -392,6 +390,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   itemSlas={itemSlas}
                   collapsedIds={collapsedIds}
                   onToggleCollapsed={onToggleCollapsed}
+                  showRecoveryFields={showRecoveryFields}
                 />
               ))}
               <div className="flex gap-2">
@@ -416,7 +415,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
       ) : (
         <>
           <div className="flex-1 w-full lg:min-w-72">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Component Name</label>
+            <label htmlFor={`${fieldId}-name`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Component Name</label>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
                 <div className="text-slate-300 dark:text-slate-600">
@@ -429,6 +428,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               </div>
               <input
                 type="text"
+                id={`${fieldId}-name`}
                 value={item.name}
                 onChange={(e) => onUpdate(item.id, { name: e.target.value })}
                 className={cn(
@@ -500,12 +500,13 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
 
           {mode === 'percentage' ? (
             <div className="w-full lg:w-32">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">SLA (%)</label>
+              <label htmlFor={`${fieldId}-sla`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">SLA (%)</label>
               <input
                 type="number"
                 step="0.001"
                 min="0"
                 max="100"
+                id={`${fieldId}-sla`}
                 value={item.sla}
                 onChange={(e) => {
                   const value = parseNumberInput(e.target.value);
@@ -517,10 +518,11 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           ) : (
             <div className="w-full lg:w-48 flex gap-2">
               <div className="flex-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (sec)</label>
+                <label htmlFor={`${fieldId}-downtime`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (sec)</label>
                 <input
                   type="number"
                   min="0"
+                  id={`${fieldId}-downtime`}
                   value={item.downtimeValue || 0}
                   onChange={(e) => {
                     const value = parseNumberInput(e.target.value);
@@ -530,8 +532,9 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 />
               </div>
               <div className="w-20">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Per</label>
+                <label htmlFor={`${fieldId}-period`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Per</label>
                 <select
+                  id={`${fieldId}-period`}
                   value={item.downtimePeriod || 'month'}
                   onChange={(e) => handleDowntimeChange(item.downtimeValue || 0, e.target.value as DowntimePeriod)}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[38px] dark:text-slate-200"
@@ -545,10 +548,11 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           )}
 
           <div className="w-full lg:w-24">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">MTTR (min)</label>
+            <label htmlFor={`${fieldId}-mttr`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">MTTR (min)</label>
             <input
               type="number"
               min="1"
+              id={`${fieldId}-mttr`}
               value={item.mttr || 60}
               onChange={(e) => {
                 const value = parseNumberInput(e.target.value, parseInt);
@@ -559,13 +563,14 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             />
           </div>
 
-          {showMore && (
+          {showRecoveryFields && (
             <>
               <div className="w-full lg:w-20">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RTO (min)</label>
+                <label htmlFor={`${fieldId}-rto`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RTO (min)</label>
                 <input
                   type="number"
                   min="0"
+                  id={`${fieldId}-rto`}
                   value={item.rto ?? ''}
                   placeholder="—"
                   onChange={(e) => onUpdate(item.id, { rto: parseNumberInput(e.target.value, parseInt) })}
@@ -575,10 +580,11 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               </div>
 
               <div className="w-full lg:w-20">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RPO (min)</label>
+                <label htmlFor={`${fieldId}-rpo`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RPO (min)</label>
                 <input
                   type="number"
                   min="0"
+                  id={`${fieldId}-rpo`}
                   value={item.rpo ?? ''}
                   placeholder="—"
                   onChange={(e) => onUpdate(item.id, { rpo: parseNumberInput(e.target.value, parseInt) })}
@@ -590,11 +596,12 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           )}
 
           <div className="w-full lg:w-20">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Replicas</label>
+            <label htmlFor={`${fieldId}-replicas`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Replicas</label>
             <input
               type="number"
               min="1"
               max="99"
+              id={`${fieldId}-replicas`}
               value={item.replicas || 1}
               onChange={(e) => {
                   const value = parseNumberInput(e.target.value, parseInt);
@@ -605,11 +612,12 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           </div>
           {(item.replicas || 1) > 1 && (
             <div className="w-full lg:w-20">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Min UP</label>
+              <label htmlFor={`${fieldId}-min-up`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Min UP</label>
               <input
                 type="number"
                 min="1"
                 max={item.replicas || 1}
+                id={`${fieldId}-min-up`}
                 value={item.minReplicasRequired || 1}
                 onChange={(e) => {
                     const value = parseNumberInput(e.target.value, parseInt);
@@ -620,13 +628,14 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               />
             </div>
           )}
-          {showMore && (item.replicas || 1) > 1 && (
+          {(item.replicas || 1) > 1 && (
             <div className="w-full lg:w-24">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Shared %</label>
+              <label htmlFor={`${fieldId}-shared`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Shared %</label>
               <input
                 type="number"
                 min="0"
                 max="100"
+                id={`${fieldId}-shared`}
                 value={item.commonCause ?? 0}
                 onChange={(e) => {
                   const value = parseNumberInput(e.target.value);
@@ -639,21 +648,6 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             </div>
           )}
           <div className="flex items-center gap-1 lg:ml-auto">
-            <button
-              onClick={() => setShowMore(!showMore)}
-              className={cn(
-                "relative flex items-center gap-1.5 px-2 h-[38px] rounded-lg text-[10px] font-bold uppercase transition-colors",
-                showMore ? "text-blue-500" : "text-slate-400 dark:text-slate-500 hover:text-blue-400"
-              )}
-              aria-expanded={showMore}
-              title={showMore ? 'Hide recovery and shared-failure fields' : ['Show recovery and shared-failure fields', ...hiddenValues].join('\n')}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              {showMore ? 'Less' : 'More'}
-              {!showMore && hiddenValues.length > 0 && (
-                <span className="absolute top-1.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" aria-label={`${hiddenValues.length} set`} />
-              )}
-            </button>
             {chaosMode && (
               <button
                 onClick={() => {
