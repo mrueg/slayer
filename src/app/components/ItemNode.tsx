@@ -23,6 +23,7 @@ import IconPicker from '@/app/components/IconPicker';
 import AutoExpandingTextarea from '@/app/components/AutoExpandingTextarea';
 import KillModal from '@/app/components/KillModal';
 import type { ModelWarning } from '@/lib/warnings';
+import type { TreeSearch } from '@/lib/search';
 import DomainPicker, { DomainChips } from '@/app/components/DomainPicker';
 import { parseNumberInput } from '@/lib/number';
 
@@ -40,9 +41,10 @@ interface ItemNodeProps {
   collapsedIds: ReadonlySet<string>;
   onToggleCollapsed: (id: string) => void;
   showRecoveryFields: boolean;
-  // Extra controls after a group's name and SLA (used for the root's view toggles)
-  headerActions?: React.ReactNode;
+  search?: TreeSearch | null;
 }
+
+const matchClass = "bg-amber-100 dark:bg-amber-500/20 rounded px-1 -mx-1";
 
 const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => {
   if (!warnings?.length) return null;
@@ -62,14 +64,17 @@ const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => 
   );
 };
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [], itemSlas, collapsedIds, onToggleCollapsed, showRecoveryFields, headerActions }) => {
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [], itemSlas, collapsedIds, onToggleCollapsed, showRecoveryFields, search }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
   const [showNotes, setShowNotes] = useState(!!item.notes);
   const [showKillModal, setShowKillModal] = useState(false);
   const fieldId = useId();
-  const isCollapsed = isGroup && collapsedIds.has(item.id);
+  // A search opens the groups leading to a match without touching the user's collapse state
+  const isCollapsed = isGroup && collapsedIds.has(item.id) && !search?.openIds.has(item.id);
+  const isMatch = search?.matchIds.has(item.id) ?? false;
+  const visibleChildren = search ? (item.children || []).filter(child => search.visibleIds.has(child.id)) : item.children || [];
   const childCount = item.children?.length || 0;
   
   const failed = item.failedReplicas || 0;
@@ -150,6 +155,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 onChange={(e) => onUpdate(item.id, { name: e.target.value })}
                 className={cn(
                   "bg-transparent font-semibold outline-none border-b border-transparent transition-all",
+                  isMatch && matchClass,
                   item.isOptional ? "text-slate-400 dark:text-slate-600 italic line-through border-transparent" : "text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600"
                 )}
               />
@@ -176,7 +182,6 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   Optional
                 </span>
               )}
-              {headerActions}
             </div>
             <div className="flex flex-wrap items-center md:justify-end gap-2">
               <button
@@ -375,7 +380,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           )}
           {!isCollapsed && (
             <div className="p-4 space-y-4">
-              {item.children?.map(child => (
+              {visibleChildren.map(child => (
                 <ItemNode 
                   key={child.id} 
                   item={child} 
@@ -391,24 +396,33 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                   collapsedIds={collapsedIds}
                   onToggleCollapsed={onToggleCollapsed}
                   showRecoveryFields={showRecoveryFields}
+                  search={search}
                 />
               ))}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onAddChild(item.id, 'component')}
-                  className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-all flex items-center justify-center gap-2 text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Component
-                </button>
-                <button
-                  onClick={() => onAddChild(item.id, 'group')}
-                  className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-all flex items-center justify-center gap-2 text-sm"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                  Add Group
-                </button>
-              </div>
+              {search && depth === 0 && visibleChildren.length === 0 && (
+                <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+                  Nothing matches “{search.query}”.
+                </p>
+              )}
+              {/* Hidden while searching: a new "New Component" wouldn't match and would vanish at once */}
+              {!search && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onAddChild(item.id, 'component')}
+                    className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Component
+                  </button>
+                  <button
+                    onClick={() => onAddChild(item.id, 'group')}
+                    className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    Add Group
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -433,6 +447,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 onChange={(e) => onUpdate(item.id, { name: e.target.value })}
                 className={cn(
                   "w-full bg-transparent border-b py-1 outline-none transition-all text-sm",
+                  isMatch && matchClass,
                   item.isOptional ? "text-slate-400 dark:text-slate-600 italic line-through border-transparent" : "text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 focus:border-blue-500"
                 )}
               />
