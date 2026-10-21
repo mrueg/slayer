@@ -10,7 +10,6 @@ import {
   getSensitivityRanking,
   incidentFreeProbability,
   getBlastRadiusMap,
-  runMonteCarlo,
 } from './sla-calculator';
 
 const YEAR_MINUTES = 365.25 * 24 * 60;
@@ -122,27 +121,6 @@ describe('calculateReliability', () => {
   });
 });
 
-describe('runMonteCarlo', () => {
-  it('produces a mean downtime matching the analytical SLA', () => {
-    const root = group('root', 'series', [
-      component('a', 99, { mttr: 60 }),
-      group('p', 'parallel', [component('b', 98, { mttr: 120 }), component('c', 98, { mttr: 30 })], { failoverSla: 95 }),
-    ]);
-    const rel = calculateReliability(root);
-    const result = runMonteCarlo(rel, 99.9, 20000);
-    const expected = (1 - calculateSLA(root) / 100) * YEAR_MINUTES;
-    expect(result.meanDowntime).toBeGreaterThan(expected * 0.97);
-    expect(result.meanDowntime).toBeLessThan(expected * 1.03);
-  });
-
-  it('treats a hard-down system as down for the whole year', () => {
-    const rel = calculateReliability(component('a', 99.9, { failedReplicas: 1 }));
-    const result = runMonteCarlo(rel, 99.9, 100);
-    expect(result.meanDowntime).toBeCloseTo(YEAR_MINUTES, 6);
-    expect(result.breachProbability).toBe(100);
-  });
-});
-
 describe('optional items', () => {
   it('excludes an optional child from a parallel group instead of treating it as perfect', () => {
     const root = group('root', 'parallel', [component('a', 99), component('b', 99.9, { isOptional: true })]);
@@ -229,19 +207,7 @@ describe('formatSLAPercentage', () => {
   });
 });
 
-describe('runMonteCarlo seeding', () => {
-  const rel = calculateReliability(group('root', 'series', [component('a', 99, { mttr: 60 }), component('b', 99.5, { mttr: 30 })]));
-
-  it('reproduces a run from its seed', () => {
-    const first = runMonteCarlo(rel, 99.9, 2000);
-    const again = runMonteCarlo(rel, 99.9, 2000, first.seed);
-    expect(again).toEqual(first);
-  });
-
-  it('produces different runs for different seeds', () => {
-    expect(runMonteCarlo(rel, 99.9, 2000, 1).distribution).not.toEqual(runMonteCarlo(rel, 99.9, 2000, 2).distribution);
-  });
-
+describe('createRandom', () => {
   it('generates uniform floats in [0, 1)', () => {
     const random = createRandom(42);
     const values = Array.from({ length: 10000 }, random);

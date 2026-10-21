@@ -1,8 +1,9 @@
-import { runMonteCarlo, type MonteCarloResult, type ReliabilityResult } from './sla-calculator';
+import type { MonteCarloResult, SLAItem } from './sla-calculator';
+import { simulateSystem } from './simulation';
 
 export interface SimulationRequest {
   id: number;
-  reliability: ReliabilityResult;
+  root: SLAItem;
   targetSla: number;
   iterations: number;
   seed?: number;
@@ -14,7 +15,7 @@ export interface SimulationResponse {
 }
 
 self.onmessage = (event: MessageEvent<SimulationRequest>) => {
-  const { id, reliability, targetSla, iterations, seed } = event.data;
-  const response: SimulationResponse = { id, result: runMonteCarlo(reliability, targetSla, iterations, seed) };
+  const { id, root, targetSla, iterations, seed } = event.data;
+  const response: SimulationResponse = { id, result: simulateSystem(root, targetSla, iterations, seed) };
   self.postMessage(response);
 };

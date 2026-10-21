@@ -29,7 +29,8 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         title: "Probabilistic Analysis",
         icon: <BarChart3 className="w-4 h-4 text-indigo-500" />,
         content: [
-          { label: "Monte Carlo Engine", text: "Simulates 10,000 years in a background worker: incidents arrive as a Poisson process and recoveries are exponential. Each run shows its seed, so it can be reproduced." },
+          { label: "Monte Carlo Engine", text: "Simulates up to 10,000 years in a background worker. Every component replica, failure domain and switch fails and recovers on its own (exponential times between failures and repairs), and the model is re-evaluated whenever something changes. So redundancy only fails when its members are down at the same time, and a domain outage takes all of its items down together. Models with very frequent failures simulate fewer years to stay fast. Each run shows its seed, so it can be reproduced." },
+          { label: "Monthly Breaches", text: "Most SLAs are measured per month. Besides the chance of the whole year going over budget, the simulation reports the chance that at least one month does, and how many months a year go over on average. A year can be fine while one bad month breaches." },
           { label: "Incident-free Chance", text: "The probability of getting through a week, month, quarter, year or a custom window without any incident, from R(t) = exp(−λt)." },
           { label: "Improvement Levers", text: "Ranks every item and failure domain by the yearly downtime saved if it never failed. The top entry gets the System Bottleneck badge; a domain shows it in the Failure Domains panel." },
           { label: "Failure Domain Impact", text: "Per domain: how many items it holds, the downtime it causes per year and the system SLA while it is down." },
