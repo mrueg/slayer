@@ -466,7 +466,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">SLA (%)</label>
               <input
                 type="number"
-                step="0.00000001"
+                step="0.001"
                 min="0"
                 max="100"
                 value={item.sla}
