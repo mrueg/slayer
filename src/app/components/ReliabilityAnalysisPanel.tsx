@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 import { Activity, BarChart3, Dices, Play, RotateCw, ShieldCheck } from 'lucide-react';
 import { DowntimePeriod, MonteCarloResult, formatDuration } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
@@ -57,6 +57,7 @@ function Objective({ label, value, target, unsetTitle }: { label: string; value?
 
 export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr, errorBudget }: ReliabilityAnalysisPanelProps) {
   const { result } = simulation;
+  const id = useId();
   return (
     <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-8">
       <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
@@ -109,13 +110,14 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
         </div>
 
         <div className="mb-4">
-          <label className={labelClass}>Target SLA for Simulation (%)</label>
+          <label htmlFor={`${id}-target-sla`} className={labelClass}>Target SLA for Simulation (%)</label>
           <div className="flex items-center gap-2">
             <input
               type="number"
               step="0.001"
               min="0"
               max="100"
+              id={`${id}-target-sla`}
               value={simulation.targetSlaOverride !== null ? simulation.targetSlaOverride : compositeSla}
               onChange={(e) => simulation.onTargetSlaOverrideChange(parseFloat(e.target.value))}
               className={cn(inputClass, "flex-1")}
@@ -206,20 +208,22 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Target RTO (min)</label>
+            <label htmlFor={`${id}-target-rto`} className={labelClass}>Target RTO (min)</label>
             <input
               type="number"
               min="0"
+              id={`${id}-target-rto`}
               value={dr.targetRto}
               onChange={(e) => dr.onTargetRtoChange(parseInt(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Target RPO (min)</label>
+            <label htmlFor={`${id}-target-rpo`} className={labelClass}>Target RPO (min)</label>
             <input
               type="number"
               min="0"
+              id={`${id}-target-rpo`}
               value={dr.targetRpo}
               onChange={(e) => dr.onTargetRpoChange(parseInt(e.target.value) || 0)}
               className={inputClass}
@@ -242,18 +246,20 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Consumed (sec)</label>
+            <label htmlFor={`${id}-consumed`} className={labelClass}>Consumed (sec)</label>
             <input
               type="number"
               min="0"
+              id={`${id}-consumed`}
               value={errorBudget.consumedSeconds}
               onChange={(e) => errorBudget.onConsumedSecondsChange(parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Period</label>
+            <label htmlFor={`${id}-period`} className={labelClass}>Period</label>
             <select
+              id={`${id}-period`}
               value={errorBudget.period}
               onChange={(e) => errorBudget.onPeriodChange(e.target.value as DowntimePeriod)}
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs h-[34px] dark:text-slate-200 font-bold uppercase"
