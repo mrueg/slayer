@@ -16,7 +16,9 @@ import {
   Flame,
   HelpCircle,
   ChevronsDownUp,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import {
   SLAItem,
@@ -49,6 +51,7 @@ import { renderDiagramSvg } from '@/lib/diagram';
 import { renderReportHtml, renderReportMarkdown } from '@/lib/report';
 import { downloadBlob, exportFilename, printHtml, svgToPngBlob } from '@/app/download';
 import { isDarkMode, setDarkMode, watchTheme } from '@/lib/theme';
+import { useBooleanPreference } from '@/lib/preferences';
 import { EXAMPLES } from '@/app/examples';
 import ItemNode from '@/app/components/ItemNode';
 import HelpModal from '@/app/components/HelpModal';
@@ -63,6 +66,9 @@ import FileMenu, { type ExportFormat } from '@/app/components/FileMenu';
 import ReliabilityAnalysisPanel from '@/app/components/ReliabilityAnalysisPanel';
 import { getModelWarnings, type ModelWarning } from '@/lib/warnings';
 import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
+
+const RECOVERY_FIELDS_KEY = 'slayer-show-recovery-fields';
+const headerActionClass = "flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:text-blue-400 dark:hover:bg-slate-800 transition-colors whitespace-nowrap";
 
 export default function ReliabilityModeling() {
   const defaultSystem: SLAItem = {
@@ -156,6 +162,7 @@ export default function ReliabilityModeling() {
   const [autoSimulate, setAutoSimulate] = useState(false);
   // View state only: kept out of the model so collapsing isn't an undo step or saved
   const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(new Set());
+  const [showRecoveryFields, setShowRecoveryFields] = useBooleanPreference(RECOVERY_FIELDS_KEY, false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const examplesRef = useRef<HTMLDivElement>(null);
@@ -621,15 +628,29 @@ export default function ReliabilityModeling() {
                 itemSlas={itemSlas}
                 collapsedIds={collapsedIds}
                 onToggleCollapsed={toggleCollapsed}
-                headerActions={nestedGroupIds.length > 0 && (
-                  <button
-                    onClick={() => setCollapsedIds(allCollapsed ? new Set() : new Set(nestedGroupIds))}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:text-blue-400 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
-                  >
-                    {allCollapsed ? <ChevronsUpDown className="w-3.5 h-3.5" /> : <ChevronsDownUp className="w-3.5 h-3.5" />}
-                    {allCollapsed ? 'Expand all' : 'Collapse all'}
-                  </button>
-                )}
+                showRecoveryFields={showRecoveryFields}
+                headerActions={
+                  <>
+                    <button
+                      onClick={() => setShowRecoveryFields(!showRecoveryFields)}
+                      className={cn(headerActionClass, showRecoveryFields && "text-blue-600 dark:text-blue-400")}
+                      aria-pressed={showRecoveryFields}
+                      title={`${showRecoveryFields ? 'Hide' : 'Show'} the RTO and RPO fields on every component`}
+                    >
+                      {showRecoveryFields ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      RTO/RPO
+                    </button>
+                    {nestedGroupIds.length > 0 && (
+                      <button
+                        onClick={() => setCollapsedIds(allCollapsed ? new Set() : new Set(nestedGroupIds))}
+                        className={headerActionClass}
+                      >
+                        {allCollapsed ? <ChevronsUpDown className="w-3.5 h-3.5" /> : <ChevronsDownUp className="w-3.5 h-3.5" />}
+                        {allCollapsed ? 'Expand all' : 'Collapse all'}
+                      </button>
+                    )}
+                  </>
+                }
               />
             ) : (
               <TopologyView 

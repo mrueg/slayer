@@ -10,7 +10,7 @@ afterEach(cleanup);
 const api: SLAItem = { id: 'api', name: 'API', type: 'component', sla: 99.9 };
 const tier: SLAItem = { id: 'tier', name: 'App Tier', type: 'group', config: 'series', children: [api] };
 
-const renderNode = (item: SLAItem, collapsedIds: ReadonlySet<string> = new Set()) => {
+const renderNode = (item: SLAItem, collapsedIds: ReadonlySet<string> = new Set(), showRecoveryFields = false) => {
   const onToggleCollapsed = vi.fn();
   render(
     <ItemNode
@@ -24,6 +24,7 @@ const renderNode = (item: SLAItem, collapsedIds: ReadonlySet<string> = new Set()
       itemSlas={{ tier: 99.9, api: 99.9 }}
       collapsedIds={collapsedIds}
       onToggleCollapsed={onToggleCollapsed}
+      showRecoveryFields={showRecoveryFields}
     />
   );
   return { user: userEvent.setup(), onToggleCollapsed };
@@ -58,32 +59,35 @@ describe('ItemNode groups', () => {
   });
 });
 
-describe('ItemNode component details', () => {
-  it('hides RTO, RPO and shared failures until More is opened', async () => {
-    const { user } = renderNode({ ...api, replicas: 3 });
+describe('ItemNode root', () => {
+  it('offers no remove button for the root group, only for nested ones', () => {
+    const outer: SLAItem = { id: 'outer', name: 'Outer', type: 'group', config: 'series', children: [tier] };
+    renderNode(outer);
+    expect(screen.queryByRole('button', { name: 'Remove Outer' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove App Tier' })).toBeTruthy();
+  });
+});
+
+describe('ItemNode recovery fields', () => {
+  it('hides RTO and RPO unless recovery fields are shown', () => {
+    renderNode({ ...api, rto: 15, rpo: 0 });
     expect(screen.queryByText('RTO (min)')).toBeNull();
     expect(screen.queryByText('RPO (min)')).toBeNull();
-    expect(screen.queryByText('Shared %')).toBeNull();
-    // Min UP belongs with Replicas and stays visible
-    expect(screen.getByText('Min UP')).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: /more/i }));
+    cleanup();
+    renderNode({ ...api, rto: 15, rpo: 0 }, new Set(), true);
+    expect((screen.getByRole('spinbutton', { name: 'RTO (min)' }) as HTMLInputElement).value).toBe('15');
+    expect((screen.getByRole('spinbutton', { name: 'RPO (min)' }) as HTMLInputElement).value).toBe('0');
+  });
+
+  it('passes the setting down to nested components', () => {
+    renderNode(tier, new Set(), true);
     expect(screen.getByText('RTO (min)')).toBeTruthy();
-    expect(screen.getByText('RPO (min)')).toBeTruthy();
-    expect(screen.getByText('Shared %')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /less/i }).getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('flags hidden values that are set and lists them on hover', () => {
-    renderNode({ ...api, rto: 15, rpo: 0, replicas: 2, commonCause: 5 });
-    const more = screen.getByRole('button', { name: /more/i });
-    expect(screen.getByLabelText('3 set')).toBeTruthy();
-    expect(more.getAttribute('title')).toBe('Show recovery and shared-failure fields\nRTO 15 min\nRPO 0 min\nShared 5%');
-  });
-
-  it('shows no flag when nothing hidden is set', () => {
-    // Shared % only applies with several replicas, so it doesn't count for one
-    renderNode({ ...api, commonCause: 5 });
-    expect(screen.queryByLabelText(/set$/)).toBeNull();
+  it('keeps shared failures visible for replicated components either way', () => {
+    renderNode({ ...api, replicas: 3 });
+    expect(screen.getByText('Min UP')).toBeTruthy();
+    expect(screen.getByRole('spinbutton', { name: 'Shared failures (%)' })).toBeTruthy();
   });
 });
