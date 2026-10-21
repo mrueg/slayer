@@ -109,34 +109,34 @@ const TopologyNode: React.FC<{
             hasHeat && getHeatColor(impactScore)
           )}>
             {isBottleneck && !isDown && !isDegraded && (
-              <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
-                <AlertTriangle className="w-2 h-2" />
+              <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
+                <AlertTriangle className="w-2.5 h-2.5" />
                 BOTTLENECK
               </div>
             )}
             {isDown && (
-              <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md animate-bounce">
-                <Skull className="w-2 h-2" />
+              <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 z-20 shadow-md animate-bounce">
+                <Skull className="w-2.5 h-2.5" />
                 DOWN
               </div>
             )}
             {isDegraded && (
-              <div className="absolute -top-2 -right-2 bg-orange-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
-                <AlertTriangle className="w-2 h-2" />
+              <div className="absolute -top-2 -right-2 bg-orange-600 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 z-20 shadow-md">
+                <AlertTriangle className="w-2.5 h-2.5" />
                 DEGRADED ({failed}/{replicas})
               </div>
             )}
             {chaosMode && !isDown && !isDegraded && impactScore > 0 && (
               <div className={cn(
-                "absolute -top-2 -left-2 px-2 py-0.5 rounded text-[8px] font-black shadow-md z-20 transition-colors",
+                "absolute -top-2 -left-2 px-2 py-0.5 rounded text-[10px] font-black shadow-md z-20 transition-colors",
                 impactScore > 0.8 ? "bg-red-600 text-white" : (impactScore > 0.4 ? "bg-orange-600 text-white" : "bg-yellow-400 text-yellow-950")
               )}>
                 {(impactScore * 100).toFixed(1)}% IMPACT
               </div>
             )}
             {isOptional && !isDown && !isDegraded && !chaosMode && (
-              <div className="absolute -top-2 -left-2 bg-slate-500 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
-                <ShieldCheck className="w-2 h-2" />
+              <div className="absolute -top-2 -left-2 bg-slate-500 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 z-20 shadow-md">
+                <ShieldCheck className="w-2.5 h-2.5" />
                 OPTIONAL
               </div>
             )}
@@ -236,7 +236,7 @@ const TopologyNode: React.FC<{
                   }
                 }}
                 className={cn(
-                  "absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[8px] font-black uppercase transition-all shadow-lg z-30",
+                  "absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all shadow-lg z-30",
                   (isDown || isDegraded)
                     ? "bg-green-600 text-white hover:bg-green-500" 
                     : "bg-red-600 text-white hover:bg-red-500 animate-pulse"
@@ -282,8 +282,8 @@ const TopologyNode: React.FC<{
             isDown ? "bg-red-500" : (isDegraded ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-700")
           )}>
             <div className={cn(
-              "absolute text-[8px] font-black px-1 border rounded uppercase z-20 whitespace-nowrap transition-colors duration-500",
-              isVertical ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" : "left-1/2 -translate-x-1/2 -top-3",
+              "absolute text-[10px] font-black px-1 border rounded uppercase z-20 whitespace-nowrap transition-colors duration-500",
+              isVertical ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" : "left-1/2 -translate-x-1/2 -top-4",
               isDown 
                 ? "bg-red-600 text-white border-red-700" 
                 : (isDegraded 
@@ -302,7 +302,7 @@ const TopologyNode: React.FC<{
                       ? "text-white bg-orange-600 border-orange-700"
                       : "text-amber-600 dark:text-amber-500 border-amber-100 dark:border-amber-900/30")
               )}>
-                <ToggleRight className="w-2 h-2" />
+                <ToggleRight className="w-2.5 h-2.5" />
                 SWITCH: {item.failoverSla}%
               </div>
             )}

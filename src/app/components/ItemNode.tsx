@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   ShieldAlert,
   StickyNote,
-  Skull
+  Skull,
+  ChevronRight,
+  SlidersHorizontal
 } from 'lucide-react';
 import { SLAItem, FailureDomain, slaFromDowntime, formatSLAPercentage, DowntimePeriod, InputMode } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
@@ -36,6 +38,10 @@ interface ItemNodeProps {
   warnings?: Record<string, ModelWarning[]>;
   failureDomains?: FailureDomain[];
   itemSlas: Record<string, number>;
+  collapsedIds: ReadonlySet<string>;
+  onToggleCollapsed: (id: string) => void;
+  // Extra controls at the start of a group's header (used for the root's collapse/expand all)
+  headerActions?: React.ReactNode;
 }
 
 const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => {
@@ -56,17 +62,26 @@ const WarningBadge: React.FC<{ warnings?: ModelWarning[] }> = ({ warnings }) => 
   );
 };
 
-const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [], itemSlas }) => {
+const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChild, depth, bottleneckIds, chaosMode, warnings, failureDomains = [], itemSlas, collapsedIds, onToggleCollapsed, headerActions }) => {
   const isGroup = item.type === 'group';
   const mode = item.inputMode || 'percentage';
   const isBottleneck = bottleneckIds.includes(item.id);
   const [showNotes, setShowNotes] = useState(!!item.notes);
   const [showKillModal, setShowKillModal] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const isCollapsed = isGroup && collapsedIds.has(item.id);
+  const childCount = item.children?.length || 0;
   
   const failed = item.failedReplicas || 0;
   const replicas = item.replicas || 1;
   const isDown = failed >= replicas;
   const isDegraded = failed > 0 && failed < replicas;
+  // Values behind the component's "More" toggle, summarised so hiding them doesn't hide that they're set
+  const hiddenValues = [
+    item.rto !== undefined && `RTO ${item.rto} min`,
+    item.rpo !== undefined && `RPO ${item.rpo} min`,
+    replicas > 1 && (item.commonCause ?? 0) > 0 && `Shared ${item.commonCause}%`,
+  ].filter((value): value is string => Boolean(value));
 
   const handleModeToggle = (newMode: InputMode) => {
     onUpdate(item.id, { inputMode: newMode });
@@ -93,27 +108,39 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
       isDegraded && "ring-2 ring-orange-500 bg-orange-50/50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-900 shadow-xl shadow-orange-500/20"
     )}>
       {isDown && (
-        <div className="absolute -top-2 -left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
-          <Skull className="w-2 h-2" />
+        <div className="absolute -top-2 -left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 z-20 shadow-md">
+          <Skull className="w-2.5 h-2.5" />
           DOWN
         </div>
       )}
       {isDegraded && (
-        <div className="absolute -top-2 -left-2 bg-orange-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 shadow-md">
-          <AlertTriangle className="w-2 h-2" />
+        <div className="absolute -top-2 -left-2 bg-orange-600 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 z-20 shadow-md">
+          <AlertTriangle className="w-2.5 h-2.5" />
           DEGRADED ({failed}/{replicas})
         </div>
       )}
       {isBottleneck && !isDown && !isDegraded && (
-        <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
-          <AlertTriangle className="w-2 h-2" />
+        <div className="absolute -top-2 -right-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 z-20 animate-pulse shadow-md">
+          <AlertTriangle className="w-2.5 h-2.5" />
           SYSTEM BOTTLENECK
         </div>
       )}
       {isGroup ? (
         <>
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/50 dark:bg-slate-900/20 gap-4">
+          <div className={cn(
+            "p-4 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/50 dark:bg-slate-900/20 gap-4",
+            isCollapsed ? "rounded-xl" : "rounded-t-xl border-b border-slate-100 dark:border-slate-700"
+          )}>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => onToggleCollapsed(item.id)}
+                className="-ml-1 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+                aria-expanded={!isCollapsed}
+                aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${item.name}`}
+                title={isCollapsed ? 'Expand' : 'Collapse'}
+              >
+                <ChevronRight className={cn("w-4 h-4 transition-transform", !isCollapsed && "rotate-90")} />
+              </button>
               <div className="flex items-center gap-1.5">
                 <div className="text-slate-400 dark:text-slate-500">
                   {getIcon(item)}
@@ -138,6 +165,11 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               )}>
                 {formatSLAPercentage(itemSlas[item.id])}%
               </span>
+              {isCollapsed && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                  {childCount} {childCount === 1 ? 'item' : 'items'}
+                </span>
+              )}
               <WarningBadge warnings={warnings?.[item.id]} />
               <DomainPicker
                 domains={failureDomains}
@@ -145,13 +177,14 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
                 onChange={(domains) => onUpdate(item.id, { domains: domains.length > 0 ? domains : undefined })}
               />
               {item.isOptional && (
-                <span className="text-[8px] font-black uppercase tracking-tighter bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-1">
-                  <ShieldCheck className="w-2 h-2" />
+                <span className="text-[10px] font-black uppercase tracking-tighter bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ShieldCheck className="w-2.5 h-2.5" />
                   Optional
                 </span>
               )}
             </div>
             <div className="flex flex-wrap items-center md:justify-end gap-2">
+              {headerActions}
               <button
                 onClick={() => onUpdate(item.id, { isOptional: !item.isOptional })}
                 className={cn(
@@ -332,7 +365,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               </button>
             </div>
           </div>
-          {showNotes && (
+          {showNotes && !isCollapsed && (
             <div className="px-4 py-3 bg-blue-50/30 dark:bg-blue-900/10 border-b border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-1 duration-200">
               <AutoExpandingTextarea
                 value={item.notes || ''}
@@ -342,39 +375,43 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               />
             </div>
           )}
-          <div className="p-4 space-y-4">
-            {item.children?.map(child => (
-              <ItemNode 
-                key={child.id} 
-                item={child} 
-                onUpdate={onUpdate} 
-                onRemove={onRemove} 
-                onAddChild={onAddChild}
-                depth={depth + 1}
-                bottleneckIds={bottleneckIds}
-                chaosMode={chaosMode}
-                warnings={warnings}
-                failureDomains={failureDomains}
-                itemSlas={itemSlas}
-              />
-            ))}
-            <div className="flex gap-2">
-              <button
-                onClick={() => onAddChild(item.id, 'component')}
-                className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add Component
-              </button>
-              <button
-                onClick={() => onAddChild(item.id, 'group')}
-                className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                <FolderPlus className="w-4 h-4" />
-                Add Group
-              </button>
+          {!isCollapsed && (
+            <div className="p-4 space-y-4">
+              {item.children?.map(child => (
+                <ItemNode 
+                  key={child.id} 
+                  item={child} 
+                  onUpdate={onUpdate} 
+                  onRemove={onRemove} 
+                  onAddChild={onAddChild}
+                  depth={depth + 1}
+                  bottleneckIds={bottleneckIds}
+                  chaosMode={chaosMode}
+                  warnings={warnings}
+                  failureDomains={failureDomains}
+                  itemSlas={itemSlas}
+                  collapsedIds={collapsedIds}
+                  onToggleCollapsed={onToggleCollapsed}
+                />
+              ))}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onAddChild(item.id, 'component')}
+                  className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Component
+                </button>
+                <button
+                  onClick={() => onAddChild(item.id, 'group')}
+                  className="flex-1 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  Add Group
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </>
       ) : (
         <>
@@ -522,31 +559,35 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
             />
           </div>
 
-          <div className="w-full lg:w-20">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RTO (min)</label>
-            <input
-              type="number"
-              min="0"
-              value={item.rto ?? ''}
-              placeholder="—"
-              onChange={(e) => onUpdate(item.id, { rto: parseNumberInput(e.target.value, parseInt) })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
-              title="Recovery Time Objective (Target time to restore service)"
-            />
-          </div>
+          {showMore && (
+            <>
+              <div className="w-full lg:w-20">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RTO (min)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={item.rto ?? ''}
+                  placeholder="—"
+                  onChange={(e) => onUpdate(item.id, { rto: parseNumberInput(e.target.value, parseInt) })}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                  title="Recovery Time Objective (Target time to restore service)"
+                />
+              </div>
 
-          <div className="w-full lg:w-20">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RPO (min)</label>
-            <input
-              type="number"
-              min="0"
-              value={item.rpo ?? ''}
-              placeholder="—"
-              onChange={(e) => onUpdate(item.id, { rpo: parseNumberInput(e.target.value, parseInt) })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
-              title="Recovery Point Objective (Acceptable data loss in minutes)"
-            />
-          </div>
+              <div className="w-full lg:w-20">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RPO (min)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={item.rpo ?? ''}
+                  placeholder="—"
+                  onChange={(e) => onUpdate(item.id, { rpo: parseNumberInput(e.target.value, parseInt) })}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
+                  title="Recovery Point Objective (Acceptable data loss in minutes)"
+                />
+              </div>
+            </>
+          )}
 
           <div className="w-full lg:w-20">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Replicas</label>
@@ -579,7 +620,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               />
             </div>
           )}
-          {(item.replicas || 1) > 1 && (
+          {showMore && (item.replicas || 1) > 1 && (
             <div className="w-full lg:w-24">
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Shared %</label>
               <input
@@ -597,45 +638,62 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               />
             </div>
           )}
-          {chaosMode && (
+          <div className="flex items-center gap-1 lg:ml-auto">
             <button
-              onClick={() => {
-                if (isDown || isDegraded) {
-                  onUpdate(item.id, { failedReplicas: 0 });
-                } else if (replicas > 1) {
-                  setShowKillModal(true);
-                } else {
-                  onUpdate(item.id, { failedReplicas: 1 });
-                }
-              }}
+              onClick={() => setShowMore(!showMore)}
               className={cn(
-                "p-1.5 rounded-lg border transition-all flex items-center gap-2",
-                (isDown || isDegraded)
-                  ? "bg-red-600 border-red-700 text-white" 
-                  : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
+                "relative flex items-center gap-1.5 px-2 h-[38px] rounded-lg text-[10px] font-bold uppercase transition-colors",
+                showMore ? "text-blue-500" : "text-slate-400 dark:text-slate-500 hover:text-blue-400"
               )}
-              title={isDown || isDegraded ? "Restore Component" : "Fail Component"}
+              aria-expanded={showMore}
+              title={showMore ? 'Hide recovery and shared-failure fields' : ['Show recovery and shared-failure fields', ...hiddenValues].join('\n')}
             >
-              {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
-              <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
+              <SlidersHorizontal className="w-4 h-4" />
+              {showMore ? 'Less' : 'More'}
+              {!showMore && hiddenValues.length > 0 && (
+                <span className="absolute top-1.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" aria-label={`${hiddenValues.length} set`} />
+              )}
             </button>
-          )}
-          <button
-            onClick={() => setShowNotes(!showNotes)}
-            className={cn(
-              "p-2 transition-colors",
-              showNotes ? "text-blue-500" : "text-slate-300 dark:text-slate-600 hover:text-blue-400"
+            {chaosMode && (
+              <button
+                onClick={() => {
+                  if (isDown || isDegraded) {
+                    onUpdate(item.id, { failedReplicas: 0 });
+                  } else if (replicas > 1) {
+                    setShowKillModal(true);
+                  } else {
+                    onUpdate(item.id, { failedReplicas: 1 });
+                  }
+                }}
+                className={cn(
+                  "p-1.5 rounded-lg border transition-all flex items-center gap-2",
+                  (isDown || isDegraded)
+                    ? "bg-red-600 border-red-700 text-white" 
+                    : "bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-900/20 dark:border-orange-900/30"
+                )}
+                title={isDown || isDegraded ? "Restore Component" : "Fail Component"}
+              >
+                {isDown || isDegraded ? <RefreshCcw className="w-3.5 h-3.5" /> : <Skull className="w-3.5 h-3.5" />}
+                <span className="text-[10px] font-bold uppercase">{isDown || isDegraded ? 'Restore' : 'Kill'}</span>
+              </button>
             )}
-            title="Toggle Notes"
-          >
-            <StickyNote className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onRemove(item.id)}
-            className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            <button
+              onClick={() => setShowNotes(!showNotes)}
+              className={cn(
+                "p-2 transition-colors",
+                showNotes ? "text-blue-500" : "text-slate-300 dark:text-slate-600 hover:text-blue-400"
+              )}
+              title="Toggle Notes"
+            >
+              <StickyNote className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onRemove(item.id)}
+              className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </>
       )}
       {showNotes && !isGroup && (

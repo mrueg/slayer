@@ -15,7 +15,14 @@ const scrollToItem = (itemId: string) => {
   setTimeout(() => el.classList.remove(...HIGHLIGHT), 1500);
 };
 
-const ModelChecks: React.FC<{ warnings: ModelWarning[]; canNavigate: boolean }> = ({ warnings, canNavigate }) => {
+interface ModelChecksProps {
+  warnings: ModelWarning[];
+  canNavigate: boolean;
+  // Expands whatever hides the item, so it is rendered before we scroll to it
+  onReveal: (itemId: string) => void;
+}
+
+const ModelChecks: React.FC<ModelChecksProps> = ({ warnings, canNavigate, onReveal }) => {
   if (warnings.length === 0) return null;
 
   return (
@@ -29,7 +36,10 @@ const ModelChecks: React.FC<{ warnings: ModelWarning[]; canNavigate: boolean }> 
         {warnings.map((warning, index) => (
           <li key={`${warning.itemId}-${index}`}>
             <button
-              onClick={() => scrollToItem(warning.itemId)}
+              onClick={() => {
+                onReveal(warning.itemId);
+                requestAnimationFrame(() => scrollToItem(warning.itemId));
+              }}
               disabled={!canNavigate}
               className="w-full text-left flex gap-2 group disabled:cursor-default"
             >
