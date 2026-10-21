@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
+import SidebarSection from '@/app/components/SidebarSection';
 import type { ModelWarning } from '@/lib/warnings';
 import { cn } from '@/lib/cn';
 
@@ -26,12 +27,12 @@ const ModelChecks: React.FC<ModelChecksProps> = ({ warnings, canNavigate, onReve
   if (warnings.length === 0) return null;
 
   return (
-    <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
-      <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
-        <AlertTriangle className="w-4 h-4 text-amber-500" />
-        <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Model Checks</h3>
-        <span className="ml-auto text-[10px] font-mono font-bold text-slate-400">{warnings.length}</span>
-      </div>
+    <SidebarSection
+      id="checks"
+      title="Model Checks"
+      icon={<AlertTriangle className="w-4 h-4 text-amber-500" />}
+      summary={warnings.length}
+    >
       <ul className="space-y-3">
         {warnings.map((warning, index) => (
           <li key={`${warning.itemId}-${index}`}>
@@ -54,7 +55,7 @@ const ModelChecks: React.FC<ModelChecksProps> = ({ warnings, canNavigate, onReve
           </li>
         ))}
       </ul>
-    </section>
+    </SidebarSection>
   );
 };
 
