@@ -80,7 +80,9 @@ const collect = (root: SLAItem, options: ReportOptions) => {
         ['Median year', formatDuration(options.simulation.medianDowntime)],
         ['Bad year (P95)', formatDuration(options.simulation.p95Downtime)],
         ['Worst case (P99)', formatDuration(options.simulation.p99Downtime)],
-        ['Breach probability', `${options.simulation.breachProbability.toFixed(2)}%`],
+        ['Breach probability (year)', `${options.simulation.breachProbability.toFixed(2)}%`],
+        ['Breach probability (any month)', `${options.simulation.monthlyBreachProbability.toFixed(2)}%`],
+        ['Months over budget per year', options.simulation.breachedMonthsPerYear.toFixed(1)],
         ['Seed', String(options.simulation.seed)],
       ] as [string, string][]
       : null,

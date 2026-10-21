@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SLAItem, calculateReliability, calculateSLA, runMonteCarlo } from './sla-calculator';
+import { SLAItem, calculateReliability, calculateSLA } from './sla-calculator';
+import { simulateSystem } from './simulation';
 
 const YEAR_MINUTES = 365.25 * 24 * 60;
 
@@ -40,7 +41,7 @@ describe('failover switchover time', () => {
 
   it('flows into the Monte Carlo simulation', () => {
     const rel = calculateReliability(pair({ failoverTime: 3 }));
-    const result = runMonteCarlo(rel, 99.9, 20000, 11);
+    const result = simulateSystem(pair({ failoverTime: 3 }), 99.9, 5000, 11);
     const expected = (1 - rel.sla / 100) * YEAR_MINUTES;
     expect(result.meanDowntime).toBeGreaterThan(expected * 0.95);
     expect(result.meanDowntime).toBeLessThan(expected * 1.05);

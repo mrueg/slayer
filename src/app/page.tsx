@@ -353,10 +353,10 @@ export default function ReliabilityModeling() {
 
   const runSimulation = useMonteCarloSimulation();
   // Lets a finished run detect that the model changed while it was running
-  const reliabilityRef = useRef(reliability);
+  const rootRef = useRef(root);
   useEffect(() => {
-    reliabilityRef.current = reliability;
-  }, [reliability]);
+    rootRef.current = root;
+  }, [root]);
 
   const warningsById = useMemo(() => {
     const map: Record<string, ModelWarning[]> = {};
@@ -367,13 +367,13 @@ export default function ReliabilityModeling() {
   const handleRunSimulation = useCallback(() => {
     setIsSimulating(true);
     const target = overrideTargetSla !== null ? overrideTargetSla : compositeSla;
-    runSimulation(reliability, target, 10000).then(result => {
+    runSimulation(root, target, 10000).then(result => {
       // null: superseded by a newer run, which will update the state
       if (result === null) return;
-      if (reliabilityRef.current === reliability) setSimulationResult(result);
+      if (rootRef.current === root) setSimulationResult(result);
       setIsSimulating(false);
     });
-  }, [runSimulation, reliability, overrideTargetSla, compositeSla]);
+  }, [runSimulation, root, overrideTargetSla, compositeSla]);
 
   // Run simulation automatically when data changes (if auto-simulate is on)
   useEffect(() => {

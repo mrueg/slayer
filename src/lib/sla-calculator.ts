@@ -88,7 +88,7 @@ const calculateKofN = (probabilities: number[], k: number): number => {
  * excluded entirely: treating them as 100% available would make any
  * parallel group containing one look perfect.
  */
-const getActiveChildren = (item: SLAItem): SLAItem[] =>
+export const getActiveChildren = (item: SLAItem): SLAItem[] =>
   (item.children || []).filter(child => !child.isOptional);
 
 interface ReplicaParams {
@@ -97,14 +97,14 @@ interface ReplicaParams {
   working: number;
 }
 
-const getReplicaParams = (item: SLAItem): ReplicaParams => {
+export const getReplicaParams = (item: SLAItem): ReplicaParams => {
   const replicas = Math.max(1, Math.floor(item.replicas || 1));
   const required = clamp(Math.floor(item.minReplicasRequired || 1), 1, replicas);
   const failed = clamp(Math.floor(item.failedReplicas || 0), 0, replicas);
   return { replicas, required, working: replicas - failed };
 };
 
-const getMinChildrenRequired = (item: SLAItem, childCount: number): number =>
+export const getMinChildrenRequired = (item: SLAItem, childCount: number): number =>
   clamp(Math.floor(item.minChildrenRequired || 1), 1, Math.max(1, childCount));
 
 /**
@@ -449,7 +449,7 @@ const toReliability = ({ availability, frequency }: NodeMetrics): ReliabilityRes
 export const calculateReliability = (root: SLAItem): ReliabilityResult => toReliability(evaluateSystem(root));
 
 /** Reliability of an item on its own, leaving failure domains out. */
-const calculateReliabilityWithoutDomains = (item: SLAItem): ReliabilityResult => toReliability(evaluateSystem(item, {}, []));
+export const calculateReliabilityWithoutDomains = (item: SLAItem): ReliabilityResult => toReliability(evaluateSystem(item, {}, []));
 
 export interface BottleneckResult {
   ids: string[];
@@ -765,106 +765,6 @@ export const createRandom = (seed: number): (() => number) => {
 
 export const randomSeed = (): number => Math.floor(Math.random() * 0x100000000);
 
-export const runMonteCarlo = (
-  reliability: ReliabilityResult,
-  targetSla: number,
-  iterations: number = 10000,
-  seed: number = randomSeed()
-): MonteCarloResult => {
-  const random = createRandom(seed);
-  const allowedDowntimeMinutes = YEAR_MINUTES * (1 - targetSla / 100);
-  const downtimes: number[] = [];
-  let breaches = 0;
-
-  const lambda = reliability.frequency;
-  const mttr = reliability.mttr;
-  // A system that is hard down (e.g. chaos-injected failure) has no failure
-  // events to sample; it is simply down for the whole year.
-  const isHardDown = reliability.sla <= 0;
-
-  for (let i = 0; i < iterations; i++) {
-    if (isHardDown) {
-      downtimes.push(YEAR_MINUTES);
-      if (YEAR_MINUTES > allowedDowntimeMinutes) breaches++;
-      continue;
-    }
-
-    let numIncidents: number;
-    if (lambda > 100) {
-      const standardNormal = Math.sqrt(-2 * Math.log(1 - random())) * Math.cos(2 * Math.PI * random());
-      numIncidents = Math.max(0, Math.round(lambda + standardNormal * Math.sqrt(lambda)));
-    } else {
-      const L = Math.exp(-lambda);
-      let k = 0;
-      let p = 1;
-      do {
-        k++;
-        p *= random();
-      } while (p > L);
-      numIncidents = k - 1;
-    }
-
-    let yearlyDowntime = 0;
-    if (numIncidents > 100) {
-      // Normal approximation of Gamma distribution for large n
-      const mean = numIncidents * mttr;
-      const stdDev = Math.sqrt(numIncidents) * mttr;
-      const standardNormal = Math.sqrt(-2 * Math.log(1 - random())) * Math.cos(2 * Math.PI * random());
-      yearlyDowntime = Math.max(0, mean + standardNormal * stdDev);
-    } else {
-      for (let j = 0; j < numIncidents; j++) {
-        yearlyDowntime += -Math.log(1 - random()) * mttr;
-      }
-    }
-
-    yearlyDowntime = Math.min(YEAR_MINUTES, yearlyDowntime);
-    downtimes.push(yearlyDowntime);
-    if (yearlyDowntime > allowedDowntimeMinutes) {
-      breaches++;
-    }
-  }
-
-  downtimes.sort((a, b) => a - b);
-  
-  const sum = downtimes.reduce((a, b) => a + b, 0);
-  const mean = sum / iterations;
-  const median = downtimes[Math.floor(iterations * 0.5)];
-  const p95 = downtimes[Math.floor(iterations * 0.95)];
-  const p99 = downtimes[Math.floor(iterations * 0.99)];
-
-  // Calculate Confidence Intervals (95%)
-  // For Breach Probability (Binomial Distribution)
-  const p = breaches / iterations;
-  const z = 1.96; // 95% confidence
-  const breachError = z * Math.sqrt((p * (1 - p)) / iterations);
-  const breachProbabilityCI: [number, number] = [
-    Math.max(0, (p - breachError) * 100),
-    Math.min(100, (p + breachError) * 100)
-  ];
-
-  // For Mean Downtime
-  const variance = downtimes.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (iterations - 1);
-  const stdDev = Math.sqrt(variance);
-  const meanError = z * (stdDev / Math.sqrt(iterations));
-  const meanDowntimeCI: [number, number] = [
-    Math.max(0, mean - meanError),
-    mean + meanError
-  ];
-
-  return {
-    iterations,
-    seed,
-    meanDowntime: mean,
-    medianDowntime: median,
-    p95Downtime: p95,
-    p99Downtime: p99,
-    breachProbability: p * 100,
-    breachProbabilityCI,
-    meanDowntimeCI,
-    distribution: downtimes
-  };
-};
-
 export interface MonteCarloResult {
   iterations: number;
   seed: number; // pass to runMonteCarlo to reproduce this run
@@ -872,10 +772,13 @@ export interface MonteCarloResult {
   medianDowntime: number;
   p95Downtime: number;
   p99Downtime: number;
-  breachProbability: number;
+  breachProbability: number; // % of years over the yearly downtime budget
   breachProbabilityCI?: [number, number];
   meanDowntimeCI?: [number, number];
-  distribution: number[];
+  monthlyBreachProbability: number; // % of years with at least one month over its budget
+  monthlyBreachProbabilityCI?: [number, number];
+  breachedMonthsPerYear: number; // average number of months over budget per year
+  distribution: number[]; // yearly downtime in minutes, sorted
 }
 
 export const getHistogramData = (distribution: number[], bins: number = 40): { bin: string, count: number, label: string }[] => {

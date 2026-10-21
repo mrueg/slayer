@@ -41,6 +41,27 @@ const sectionHeadingClass = "text-[10px] font-bold uppercase tracking-wider text
 const labelClass = "block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1";
 const inputClass = "w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200";
 
+function BreachBar({ label, probability, detail }: { label: string; probability: number; detail?: string }) {
+  const breached = probability > 5;
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-[10px] font-bold text-slate-400 uppercase">{label}</span>
+        <span className={cn("text-sm font-black font-mono", breached ? "text-red-500" : "text-emerald-500")}>
+          {probability.toFixed(2)}%
+        </span>
+      </div>
+      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div
+          className={cn("h-full transition-all duration-1000", breached ? "bg-red-500" : "bg-emerald-500")}
+          style={{ width: `${Math.min(100, probability)}%` }}
+        />
+      </div>
+      {detail && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{detail}</p>}
+    </div>
+  );
+}
+
 function Objective({ label, value, target, unsetTitle }: { label: string; value?: number; target: number; unsetTitle: string }) {
   return (
     <div className="flex items-center justify-between text-xs">
@@ -157,25 +178,13 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
           ) : null
         ) : (
           <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Breach Probability</span>
-                <span className={cn(
-                  "text-sm font-black font-mono",
-                  result.breachProbability > 5 ? "text-red-500" : "text-emerald-500"
-                )}>
-                  {result.breachProbability.toFixed(2)}%
-                </span>
-              </div>
-              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full transition-all duration-1000",
-                    result.breachProbability > 5 ? "bg-red-500" : "bg-emerald-500"
-                  )}
-                  style={{ width: `${Math.min(100, result.breachProbability)}%` }}
-                />
-              </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 space-y-3">
+              <BreachBar label="Year over budget" probability={result.breachProbability} />
+              <BreachBar
+                label="Any month over budget"
+                probability={result.monthlyBreachProbability}
+                detail={`${result.breachedMonthsPerYear.toFixed(1)} of 12 months per year on average`}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -188,6 +197,10 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
                 <span className="text-xs font-mono font-bold text-red-500">{formatDuration(result.p95Downtime)}</span>
               </div>
             </div>
+
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+              {result.iterations.toLocaleString('en-US')} simulated years
+            </p>
 
             <button
               onClick={simulation.onShowDistribution}

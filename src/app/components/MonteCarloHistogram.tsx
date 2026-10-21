@@ -20,7 +20,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
             </div>
             <div>
               <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Downtime Distribution</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{result.iterations.toLocaleString()} simulations of yearly system performance · seed {result.seed}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{result.iterations.toLocaleString()} simulated years, every component failing and recovering on its own · seed {result.seed}</p>
             </div>
           </div>
           <button 
@@ -33,9 +33,9 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
 
         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8">
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Breach Probability</span>
+              <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Year Over Budget</span>
               <span className={cn("text-xl font-black font-mono", result.breachProbability > 5 ? "text-red-500" : "text-emerald-500")}>
                 {result.breachProbability.toFixed(2)}%
               </span>
@@ -44,6 +44,18 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
                   95% CI: [{result.breachProbabilityCI[0].toFixed(2)}%, {result.breachProbabilityCI[1].toFixed(2)}%]
                 </span>
               )}
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Any Month Over Budget</span>
+              <span className={cn("text-xl font-black font-mono", result.monthlyBreachProbability > 5 ? "text-red-500" : "text-emerald-500")}>
+                {result.monthlyBreachProbability.toFixed(2)}%
+              </span>
+              {result.monthlyBreachProbabilityCI && (
+                <span className="block text-[10px] text-slate-400 font-mono mt-1">
+                  95% CI: [{result.monthlyBreachProbabilityCI[0].toFixed(2)}%, {result.monthlyBreachProbabilityCI[1].toFixed(2)}%]
+                </span>
+              )}
+              <span className="block text-[10px] text-slate-400 mt-1">{result.breachedMonthsPerYear.toFixed(1)} months/year over budget</span>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
               <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Mean Year</span>

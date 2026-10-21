@@ -74,9 +74,11 @@ describe('renderReportMarkdown', () => {
     expect(md).not.toContain('## Monte Carlo Simulation');
     const withSim = renderReportMarkdown(model, {
       ...options,
-      simulation: { iterations: 10000, seed: 42, meanDowntime: 60, medianDowntime: 50, p95Downtime: 120, p99Downtime: 200, breachProbability: 12.5, distribution: [] },
+      simulation: { iterations: 10000, seed: 42, meanDowntime: 60, medianDowntime: 50, p95Downtime: 120, p99Downtime: 200, breachProbability: 12.5, monthlyBreachProbability: 40, breachedMonthsPerYear: 0.75, distribution: [] },
     });
-    expect(withSim).toContain('| Breach probability | 12.50% |');
+    expect(withSim).toContain('| Breach probability (year) | 12.50% |');
+    expect(withSim).toContain('| Breach probability (any month) | 40.00% |');
+    expect(withSim).toContain('| Months over budget per year | 0.8 |');
     expect(withSim).toContain('| Seed | 42 |');
   });
 });

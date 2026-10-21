@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { runMonteCarlo, type MonteCarloResult, type ReliabilityResult } from '@/lib/sla-calculator';
+import type { MonteCarloResult, SLAItem } from '@/lib/sla-calculator';
+import { simulateSystem } from '@/lib/simulation';
 import type { SimulationRequest, SimulationResponse } from '@/lib/monte-carlo.worker';
 
-type Run = (reliability: ReliabilityResult, targetSla: number, iterations: number) => Promise<MonteCarloResult | null>;
+type Run = (root: SLAItem, targetSla: number, iterations: number) => Promise<MonteCarloResult | null>;
 
 /**
  * Runs the Monte Carlo simulation in a Web Worker so the UI stays responsive.
@@ -22,9 +23,9 @@ export const useMonteCarloSimulation = (): Run => {
     pendingRef.current?.();
   }, []);
 
-  return useCallback<Run>((reliability, targetSla, iterations) => {
+  return useCallback<Run>((root, targetSla, iterations) => {
     if (typeof Worker === 'undefined') {
-      return Promise.resolve(runMonteCarlo(reliability, targetSla, iterations));
+      return Promise.resolve(simulateSystem(root, targetSla, iterations));
     }
 
     // Supersede a run that is still in progress
@@ -57,7 +58,7 @@ export const useMonteCarloSimulation = (): Run => {
         worker.terminate();
         if (workerRef.current === worker) workerRef.current = null;
         console.error('Simulation worker failed, running on the main thread', event.message);
-        resolve(runMonteCarlo(reliability, targetSla, iterations));
+        resolve(simulateSystem(root, targetSla, iterations));
       };
       pendingRef.current = () => {
         cleanup();
@@ -65,7 +66,7 @@ export const useMonteCarloSimulation = (): Run => {
       };
       worker.addEventListener('message', onMessage);
       worker.addEventListener('error', onError);
-      const request: SimulationRequest = { id, reliability, targetSla, iterations };
+      const request: SimulationRequest = { id, root, targetSla, iterations };
       worker.postMessage(request);
     });
   }, []);

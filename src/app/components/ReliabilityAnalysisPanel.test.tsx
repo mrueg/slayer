@@ -89,9 +89,14 @@ describe('ReliabilityAnalysisPanel', () => {
     });
 
     it('shows the results and opens the distribution', async () => {
-      const result = { breachProbability: 12.345, medianDowntime: 90, p95Downtime: 600 } as MonteCarloResult;
+      const result = {
+        iterations: 2500, breachProbability: 12.345, monthlyBreachProbability: 64.2, breachedMonthsPerYear: 1.25, medianDowntime: 90, p95Downtime: 600,
+      } as MonteCarloResult;
       const { user, props } = setup({ simulation: { result } });
       expect(screen.getByText('12.35%')).toBeTruthy();
+      expect(screen.getByText('64.20%')).toBeTruthy();
+      expect(screen.getByText('1.3 of 12 months per year on average')).toBeTruthy();
+      expect(screen.getByText('2,500 simulated years')).toBeTruthy();
       expect(screen.getByText('1h 30m')).toBeTruthy();
       expect(screen.getByText('10h')).toBeTruthy();
       await user.click(screen.getByRole('button', { name: /view distribution/i }));
