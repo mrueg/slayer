@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { SLAItem, FailureDomain, formatSLAPercentage } from '@/lib/sla-calculator';
-import { MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Skull, Flame } from 'lucide-react';
+import { MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Skull, Flame, Columns, Rows } from 'lucide-react';
 import KillModal from './KillModal';
 import { cn } from '@/lib/cn';
 import { getIcon } from '@/app/icons';
@@ -11,6 +11,7 @@ interface TopologyViewProps {
   root: SLAItem;
   bottleneckIds: string[];
   layout: 'horizontal' | 'vertical';
+  onLayoutChange: (layout: 'horizontal' | 'vertical') => void;
   chaosMode: boolean;
   onUpdate: (id: string, updates: Partial<SLAItem>) => void;
   blastRadiusMap: Record<string, number>;
@@ -349,7 +350,7 @@ const TopologyNode: React.FC<{
   );
 };
 
-export default function TopologyView({ root, bottleneckIds, layout, chaosMode, onUpdate, blastRadiusMap, itemSlas }: TopologyViewProps) {
+export default function TopologyView({ root, bottleneckIds, layout, onLayoutChange, chaosMode, onUpdate, blastRadiusMap, itemSlas }: TopologyViewProps) {
   return (
     <div className={cn(
       "w-full overflow-auto rounded-3xl border shadow-inner min-h-[600px] relative group/canvas transition-colors duration-700",
@@ -363,6 +364,26 @@ export default function TopologyView({ root, bottleneckIds, layout, chaosMode, o
       )}>
         {chaosMode ? <Flame className="w-3 h-3" /> : <MousePointer2 className="w-3 h-3" />}
         {chaosMode ? "Chaos Simulation Active" : "Interactive Topology Map"}
+      </div>
+      <div className="absolute top-6 right-6 flex bg-white/80 dark:bg-slate-800/80 backdrop-blur p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm z-20">
+        {([
+          ['horizontal', Columns, 'Horizontal layout'],
+          ['vertical', Rows, 'Vertical layout'],
+        ] as const).map(([value, Icon, label]) => (
+          <button
+            key={value}
+            onClick={() => onLayoutChange(value)}
+            className={cn(
+              "p-1.5 rounded-md transition-all",
+              layout === value ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+            )}
+            title={label}
+            aria-label={label}
+            aria-pressed={layout === value}
+          >
+            <Icon className="w-4 h-4" />
+          </button>
+        ))}
       </div>
       <div className="p-24 min-w-max flex items-center justify-center min-h-full">
         <TopologyNode 

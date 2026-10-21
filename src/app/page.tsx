@@ -5,28 +5,16 @@ import {
   Calculator,
   Undo2,
   Redo2,
-  RefreshCcw,
-  Eraser,
   Network,
   List,
   Moon,
   Sun,
-  Download,
-  Upload,
-  Activity,
   ChevronDown,
   Library,
   Share2,
-  ShieldCheck,
-  Columns,
-  Rows,
   Skull,
   Flame,
-  Dices,
-  BarChart3,
-  HelpCircle,
-  Play,
-  RotateCw
+  HelpCircle
 } from 'lucide-react';
 import {
   SLAItem,
@@ -69,6 +57,8 @@ import SensitivityRanking from '@/app/components/SensitivityRanking';
 import ModelChecks from '@/app/components/ModelChecks';
 import IncidentFreeOdds from '@/app/components/IncidentFreeOdds';
 import FailureDomainsPanel from '@/app/components/FailureDomainsPanel';
+import FileMenu, { type ExportFormat } from '@/app/components/FileMenu';
+import ReliabilityAnalysisPanel from '@/app/components/ReliabilityAnalysisPanel';
 import { getModelWarnings, type ModelWarning } from '@/lib/warnings';
 import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
 
@@ -150,7 +140,6 @@ export default function ReliabilityModeling() {
   const [chaosMode, setChaosMode] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showHistogram, setShowHistogram] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
@@ -166,7 +155,6 @@ export default function ReliabilityModeling() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const examplesRef = useRef<HTMLDivElement>(null);
-  const exportRef = useRef<HTMLDivElement>(null);
 
   // Restore on mount: a shared link wins over the autosaved model
   useEffect(() => {
@@ -230,9 +218,6 @@ export default function ReliabilityModeling() {
       if (examplesRef.current && !examplesRef.current.contains(event.target as Node)) {
         setShowExamples(false);
       }
-      if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
-        setShowExportMenu(false);
-      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -276,8 +261,7 @@ export default function ReliabilityModeling() {
     }
   };
 
-  const handleExport = async (format: 'json' | 'markdown' | 'pdf' | 'svg' | 'png') => {
-    setShowExportMenu(false);
+  const handleExport = async (format: ExportFormat) => {
     const reportOptions = { generatedAt: new Date(), targetRto, targetRpo, simulation: simulationResult };
     try {
       switch (format) {
@@ -478,31 +462,6 @@ export default function ReliabilityModeling() {
               </button>
             </div>
 
-            {view === 'topology' && (
-              <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm animate-in fade-in zoom-in-95 duration-200">
-                <button
-                  onClick={() => setTopologyLayout('horizontal')}
-                  className={cn(
-                    "p-1.5 rounded-md transition-all",
-                    topologyLayout === 'horizontal' ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  )}
-                  title="Horizontal Layout"
-                >
-                  <Columns className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setTopologyLayout('vertical')}
-                  className={cn(
-                    "p-1.5 rounded-md transition-all",
-                    topologyLayout === 'vertical' ? "bg-indigo-600 text-white shadow-md" : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  )}
-                  title="Vertical Layout"
-                >
-                  <Rows className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
 
             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -597,77 +556,13 @@ export default function ReliabilityModeling() {
 
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
 
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-                title="Import configuration from JSON"
-              >
-                <Upload className="w-4 h-4" />
-                <span className="hidden xl:inline">Import</span>
-              </button>
-              <div className="relative" ref={exportRef}>
-                <button 
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-                  title="Export the model, a report or a diagram"
-                  aria-haspopup="menu"
-                  aria-expanded={showExportMenu}
-                >
-                  <Download className="w-4 h-4" />
-                  <span className="hidden xl:inline">Export</span>
-                  <ChevronDown className={cn("w-3 h-3 transition-transform", showExportMenu && "rotate-180")} />
-                </button>
-
-                {showExportMenu && (
-                  <div role="menu" className="absolute top-full mt-2 right-0 w-60 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {([
-                      ['Model', [['json', 'Configuration (JSON)']]],
-                      ['Report', [['markdown', 'Markdown (.md)'], ['pdf', 'PDF (print dialog)']]],
-                      ['Diagram', [['svg', 'SVG image'], ['png', 'PNG image']]],
-                    ] as const).map(([heading, options]) => (
-                      <div key={heading}>
-                        <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{heading}</div>
-                        {options.map(([format, label]) => (
-                          <button
-                            key={format}
-                            role="menuitem"
-                            onClick={() => handleExport(format)}
-                            className="w-full text-left px-4 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
+            <FileMenu
+              onImport={() => fileInputRef.current?.click()}
+              onExport={handleExport}
+              onReset={handleReset}
+              onClear={handleClear}
+            />
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
-
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={handleReset}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-                title="Reset to default example"
-              >
-                <RefreshCcw className="w-4 h-4" />
-                <span className="hidden xl:inline text-xs">Reset</span>
-              </button>
-              <button 
-                onClick={handleClear}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-100 dark:hover:border-red-800 transition-colors shadow-sm"
-                title="Clear all components"
-              >
-                <Eraser className="w-4 h-4" />
-                <span className="hidden xl:inline text-xs text-red-600">Clear</span>
-              </button>
-            </div>
-
-            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1" />
-
             <button
               onClick={() => setShowHelp(true)}
               className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
@@ -690,7 +585,7 @@ export default function ReliabilityModeling() {
         </header>
 
         <div className="flex flex-col xl:flex-row gap-8 items-start">
-          <div className="flex-1 w-full space-y-6">
+          <div className="flex-1 min-w-0 w-full space-y-6">
             {view === 'list' ? (
               <ItemNode 
                 item={root} 
@@ -708,7 +603,8 @@ export default function ReliabilityModeling() {
               <TopologyView 
                 root={root} 
                 bottleneckIds={bottleneck.ids} 
-                layout={topologyLayout} 
+                layout={topologyLayout}
+                onLayoutChange={setTopologyLayout}
                 chaosMode={chaosMode}
                 onUpdate={onUpdate}
                 blastRadiusMap={blastRadiusMap}
@@ -772,12 +668,6 @@ export default function ReliabilityModeling() {
                   <IncidentFreeOdds reliability={reliability} missionHours={missionHours} onMissionHoursChange={setMissionHours} />
                 </div>
 
-                <div className="pt-4 border-t border-slate-800">
-                  <div className="text-xs text-slate-500 space-y-2">
-                    <p>• Series: Components depend on each other.</p>
-                    <p>• Parallel: Components provide redundancy.</p>
-                  </div>
-                </div>
               </div>
             </section>
 
@@ -794,256 +684,34 @@ export default function ReliabilityModeling() {
               onRemove={handleRemoveDomain}
             />
 
-            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-8">
-              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
-                <Activity className="w-4 h-4 text-blue-500" />
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white italic">Reliability Analysis</h3>
-              </div>
-
-              {/* Monte Carlo Simulation (Promoted to Top) */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Dices className="w-4 h-4 text-indigo-500" />
-                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Monte Carlo Simulation</h3>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-500 transition-colors">Auto-run</span>
-                      <button 
-                        onClick={() => setAutoSimulate(!autoSimulate)}
-                        className={cn(
-                          "w-6 h-3 rounded-full relative transition-colors duration-200 outline-none",
-                          autoSimulate ? "bg-indigo-500" : "bg-slate-200 dark:bg-slate-700"
-                        )}
-                      >
-                        <div className={cn(
-                          "absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all duration-200 shadow-sm",
-                          autoSimulate ? "left-3.5" : "left-0.5"
-                        )} />
-                      </button>
-                    </label>
-                    <div className={cn(
-                      "flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 transition-all",
-                      isSimulating ? "animate-pulse opacity-100" : "opacity-50"
-                    )}>
-                      {isSimulating ? (
-                        <>
-                          <RotateCw className="w-2 h-2 animate-spin" />
-                          Simulating
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-1 h-1 rounded-full bg-indigo-500" />
-                          Ready
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target SLA for Simulation (%)</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      max="100"
-                      value={overrideTargetSla !== null ? overrideTargetSla : compositeSla}
-                      onChange={(e) => setOverrideTargetSla(parseFloat(e.target.value))}
-                      className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
-                      placeholder={compositeSla.toString()}
-                    />
-                    {overrideTargetSla !== null && (
-                      <button 
-                        onClick={() => setOverrideTargetSla(null)}
-                        className="text-[10px] font-bold text-indigo-500 hover:text-indigo-400 uppercase whitespace-nowrap"
-                      >
-                        Reset
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {!autoSimulate && (
-                  <button
-                    onClick={handleRunSimulation}
-                    disabled={isSimulating}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-50 active:scale-[0.98]"
-                  >
-                    <Play className="w-4 h-4 fill-current" />
-                    Run Yearly Simulation
-                  </button>
-                )}
-
-                {!simulationResult ? (
-                  autoSimulate ? (
-                    <div className="py-2 text-center">
-                      <p className="text-[10px] text-slate-400 italic">
-                        Waiting for data changes...
-                      </p>
-                    </div>
-                  ) : null
-                ) : (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Breach Probability</span>
-                        <span className={cn(
-                          "text-sm font-black font-mono",
-                          simulationResult.breachProbability > 5 ? "text-red-500" : "text-emerald-500"
-                        )}>
-                          {simulationResult.breachProbability.toFixed(2)}%
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div 
-                          className={cn(
-                            "h-full transition-all duration-1000",
-                            simulationResult.breachProbability > 5 ? "bg-red-500" : "bg-emerald-500"
-                          )}
-                          style={{ width: `${Math.min(100, simulationResult.breachProbability)}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                        <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Median Year</span>
-                        <span className="text-[10px] font-mono font-bold dark:text-white">{formatDuration(simulationResult.medianDowntime)}</span>
-                      </div>
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                        <span className="block text-[8px] font-black text-red-400 uppercase mb-1">P95 (Bad Year)</span>
-                        <span className="text-[10px] font-mono font-bold text-red-500">{formatDuration(simulationResult.p95Downtime)}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setShowHistogram(true)}
-                      className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase transition-all"
-                    >
-                      <BarChart3 className="w-3 h-3" />
-                      View Distribution
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="h-[1px] bg-slate-100 dark:bg-slate-700" />
-
-              {/* Disaster Recovery Goals */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">DR Goals (RTO/RPO)</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RTO</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={targetRto}
-                      onChange={(e) => setTargetRto(parseInt(e.target.value) || 0)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Target RPO</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={targetRpo}
-                      onChange={(e) => setTargetRpo(parseInt(e.target.value) || 0)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-bold text-slate-400 uppercase">System RTO:</span>
-                    {drMetrics.rto === undefined ? (
-                      <span className="font-mono font-black text-slate-400" title="No component defines an RTO">not set</span>
-                    ) : (
-                      <span className={cn("font-mono font-black", drMetrics.rto <= targetRto ? "text-emerald-600" : "text-red-600")}>
-                        {formatDuration(drMetrics.rto)} {drMetrics.rto <= targetRto ? "✓" : "!!"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-bold text-slate-400 uppercase">System RPO:</span>
-                    {drMetrics.rpo === undefined ? (
-                      <span className="font-mono font-black text-slate-400" title="No component defines an RPO">not set</span>
-                    ) : (
-                      <span className={cn("font-mono font-black", drMetrics.rpo <= targetRpo ? "text-emerald-600" : "text-red-600")}>
-                        {formatDuration(drMetrics.rpo)} {drMetrics.rpo <= targetRpo ? "✓" : "!!"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-[1px] bg-slate-100 dark:bg-slate-700" />
-
-              {/* Error Budget Modeling */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-blue-500" />
-                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Error Budget Modeling</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Downtime (s)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={consumedDowntime}
-                      onChange={(e) => setConsumedDowntime(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm dark:text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Period</label>
-                    <select
-                      value={budgetPeriod}
-                      onChange={(e) => setBudgetPeriod(e.target.value as DowntimePeriod)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-[10px] h-[34px] dark:text-slate-200 font-bold uppercase"
-                    >
-                      <option value="day">Day</option>
-                      <option value="month">Month</option>
-                      <option value="year">Year</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-end mb-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Remaining Budget</span>
-                    <span className={cn(
-                      "font-mono font-bold text-xs",
-                      errorBudget.isBreached ? "text-red-500" : "text-emerald-500"
-                    )}>
-                      {errorBudget.isBreached ? "BREACHED" : formatDuration(errorBudget.remainingSeconds / 60)}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
-                    <div 
-                      className={cn(
-                        "h-full transition-all duration-500",
-                        errorBudget.isBreached ? "bg-red-500" : "bg-emerald-500"
-                      )}
-                      style={{ 
-                        width: `${Math.min(100, Math.max(0, (errorBudget.remainingSeconds / errorBudget.totalBudgetSeconds) * 100))}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
+            <ReliabilityAnalysisPanel
+              compositeSla={compositeSla}
+              simulation={{
+                result: simulationResult,
+                isRunning: isSimulating,
+                autoRun: autoSimulate,
+                onAutoRunChange: setAutoSimulate,
+                targetSlaOverride: overrideTargetSla,
+                onTargetSlaOverrideChange: setOverrideTargetSla,
+                onRun: handleRunSimulation,
+                onShowDistribution: () => setShowHistogram(true),
+              }}
+              dr={{
+                rto: drMetrics.rto,
+                rpo: drMetrics.rpo,
+                targetRto,
+                targetRpo,
+                onTargetRtoChange: setTargetRto,
+                onTargetRpoChange: setTargetRpo,
+              }}
+              errorBudget={{
+                ...errorBudget,
+                consumedSeconds: consumedDowntime,
+                onConsumedSecondsChange: setConsumedDowntime,
+                period: budgetPeriod,
+                onPeriodChange: setBudgetPeriod,
+              }}
+            />
           </div>
         </div>
 
