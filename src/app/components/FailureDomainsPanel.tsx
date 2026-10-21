@@ -45,8 +45,8 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
                   aria-label="Domain name"
                 />
                 {bottleneckIds.includes(domain.id) && (
-                  <span className="shrink-0 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black flex items-center gap-1 shadow-md">
-                    <AlertTriangle className="w-2 h-2" />
+                  <span className="shrink-0 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 shadow-md">
+                    <AlertTriangle className="w-2.5 h-2.5" />
                     SYSTEM BOTTLENECK
                   </span>
                 )}

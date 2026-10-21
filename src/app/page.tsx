@@ -14,7 +14,9 @@ import {
   Share2,
   Skull,
   Flame,
-  HelpCircle
+  HelpCircle,
+  ChevronsDownUp,
+  ChevronsUpDown
 } from 'lucide-react';
 import {
   SLAItem,
@@ -40,7 +42,7 @@ import { generateId } from '@/lib/id';
 import { createHistory, historyReducer } from '@/lib/history';
 import { loadSavedModel, saveModel } from '@/lib/autosave';
 import { normalizeDomain, normalizeItem } from '@/lib/normalize';
-import { updateItemInTree, removeItemFromTree, addChildToGroup } from '@/lib/tree';
+import { updateItemInTree, removeItemFromTree, addChildToGroup, findAncestorIds, findNestedGroupIds } from '@/lib/tree';
 import { MAX_FAILURE_DOMAINS, filterDomainTags, nextDomainName } from '@/lib/domains';
 import { cn } from '@/lib/cn';
 import { renderDiagramSvg } from '@/lib/diagram';
@@ -152,6 +154,8 @@ export default function ReliabilityModeling() {
   const [overrideTargetSla, setOverrideTargetSla] = useState<number | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [autoSimulate, setAutoSimulate] = useState(false);
+  // View state only: kept out of the model so collapsing isn't an undo step or saved
+  const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(new Set());
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const examplesRef = useRef<HTMLDivElement>(null);
@@ -386,6 +390,23 @@ export default function ReliabilityModeling() {
     }
   };
 
+  const toggleCollapsed = useCallback((id: string) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }, []);
+
+  const nestedGroupIds = useMemo(() => findNestedGroupIds(root), [root]);
+  const allCollapsed = nestedGroupIds.length > 0 && nestedGroupIds.every(id => collapsedIds.has(id));
+
+  const revealItem = useCallback((id: string) => {
+    const ancestors = findAncestorIds(root, id);
+    if (!ancestors?.some(a => collapsedIds.has(a))) return;
+    setCollapsedIds(prev => new Set([...prev].filter(c => !ancestors.includes(c))));
+  }, [root, collapsedIds]);
+
   const failureDomains = root.failureDomains || [];
 
   const handleAddDomain = () => {
@@ -598,6 +619,17 @@ export default function ReliabilityModeling() {
                 warnings={warningsById}
                 failureDomains={failureDomains}
                 itemSlas={itemSlas}
+                collapsedIds={collapsedIds}
+                onToggleCollapsed={toggleCollapsed}
+                headerActions={nestedGroupIds.length > 0 && (
+                  <button
+                    onClick={() => setCollapsedIds(allCollapsed ? new Set() : new Set(nestedGroupIds))}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:text-blue-400 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
+                  >
+                    {allCollapsed ? <ChevronsUpDown className="w-3.5 h-3.5" /> : <ChevronsDownUp className="w-3.5 h-3.5" />}
+                    {allCollapsed ? 'Expand all' : 'Collapse all'}
+                  </button>
+                )}
               />
             ) : (
               <TopologyView 
@@ -671,7 +703,7 @@ export default function ReliabilityModeling() {
               </div>
             </section>
 
-            <ModelChecks warnings={modelWarnings} canNavigate={view === 'list'} />
+            <ModelChecks warnings={modelWarnings} canNavigate={view === 'list'} onReveal={revealItem} />
 
             <SensitivityRanking ranking={sensitivityRanking} />
 

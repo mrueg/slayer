@@ -36,3 +36,19 @@ export const addChildToGroup = (items: SLAItem[], groupId: string, newItem: SLAI
     return item;
   });
 };
+
+// Ids of the groups containing an item, outermost first ([] for the root, undefined if not found)
+export const findAncestorIds = (root: SLAItem, id: string): string[] | undefined => {
+  if (root.id === id) return [];
+  for (const child of root.children || []) {
+    const path = findAncestorIds(child, id);
+    if (path) return [root.id, ...path];
+  }
+  return undefined;
+};
+
+// Ids of every group below the root, so "collapse all" still shows the top level
+export const findNestedGroupIds = (root: SLAItem): string[] =>
+  (root.children || []).flatMap(child =>
+    child.type === 'group' ? [child.id, ...findNestedGroupIds(child)] : []
+  );
