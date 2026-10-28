@@ -73,8 +73,8 @@ describe('ItemNode root', () => {
 describe('ItemNode recovery fields', () => {
   it('hides RTO and RPO unless recovery fields are shown', () => {
     renderNode({ ...api, rto: 15, rpo: 0 });
-    expect(screen.queryByText('RTO (min)')).toBeNull();
-    expect(screen.queryByText('RPO (min)')).toBeNull();
+    expect(screen.queryByLabelText('RTO (min)')).toBeNull();
+    expect(screen.queryByLabelText('RPO (min)')).toBeNull();
 
     cleanup();
     renderNode({ ...api, rto: 15, rpo: 0 }, new Set(), true);
@@ -84,7 +84,7 @@ describe('ItemNode recovery fields', () => {
 
   it('passes the setting down to nested components', () => {
     renderNode(tier, new Set(), true);
-    expect(screen.getByText('RTO (min)')).toBeTruthy();
+    expect(screen.getByLabelText('RTO (min)')).toBeTruthy();
   });
 
   it('keeps shared failures visible for replicated components either way', () => {

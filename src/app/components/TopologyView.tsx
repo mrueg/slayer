@@ -6,6 +6,7 @@ import { MousePointer2, AlertTriangle, ToggleRight, ShieldCheck, Skull, Flame, C
 import KillModal from './KillModal';
 import { cn } from '@/lib/cn';
 import { getIcon } from '@/app/icons';
+import { Abbr } from '@/app/components/Abbr';
 
 interface TopologyViewProps {
   root: SLAItem;
@@ -206,7 +207,7 @@ const TopologyNode: React.FC<{
                   "text-[9px] font-black uppercase tracking-wider mb-1 transition-colors duration-500",
                   hasHeat ? "text-slate-600 dark:text-slate-400" : (isGroup ? "text-slate-400 dark:text-slate-500" : "text-slate-500 dark:text-slate-600")
                 )}>
-                  SLA
+                  <Abbr>SLA</Abbr>
                 </div>
                 <span className={cn(
                   "font-mono text-sm font-black transition-colors duration-500",

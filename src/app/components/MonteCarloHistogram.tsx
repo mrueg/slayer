@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Plus, BarChart3 } from 'lucide-react';
 import { formatDuration, MonteCarloResult, getHistogramData } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
+import { Abbr } from '@/app/components/Abbr';
 
 const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: number, onClose: () => void }> = ({ result, targetSla, onClose }) => {
   const bins = useMemo(() => getHistogramData(result.distribution, 50), [result.distribution]);
@@ -41,7 +42,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
               </span>
               {result.breachProbabilityCI && (
                 <span className="block text-[10px] text-slate-400 font-mono mt-1">
-                  95% CI: [{result.breachProbabilityCI[0].toFixed(2)}%, {result.breachProbabilityCI[1].toFixed(2)}%]
+                  95% <Abbr>CI</Abbr>: [{result.breachProbabilityCI[0].toFixed(2)}%, {result.breachProbabilityCI[1].toFixed(2)}%]
                 </span>
               )}
             </div>
@@ -52,7 +53,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
               </span>
               {result.monthlyBreachProbabilityCI && (
                 <span className="block text-[10px] text-slate-400 font-mono mt-1">
-                  95% CI: [{result.monthlyBreachProbabilityCI[0].toFixed(2)}%, {result.monthlyBreachProbabilityCI[1].toFixed(2)}%]
+                  95% <Abbr>CI</Abbr>: [{result.monthlyBreachProbabilityCI[0].toFixed(2)}%, {result.monthlyBreachProbabilityCI[1].toFixed(2)}%]
                 </span>
               )}
               <span className="block text-[10px] text-slate-400 mt-1">{result.breachedMonthsPerYear.toFixed(1)} months/year over budget</span>
@@ -62,7 +63,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
               <span className="text-xl font-black font-mono dark:text-white">{formatDuration(result.meanDowntime)}</span>
               {result.meanDowntimeCI && (
                 <span className="block text-[10px] text-slate-400 font-mono mt-1">
-                  95% CI: [{formatDuration(result.meanDowntimeCI[0])}, {formatDuration(result.meanDowntimeCI[1])}]
+                  95% <Abbr>CI</Abbr>: [{formatDuration(result.meanDowntimeCI[0])}, {formatDuration(result.meanDowntimeCI[1])}]
                 </span>
               )}
             </div>
@@ -81,7 +82,7 @@ const MonteCarloHistogram: React.FC<{ result: MonteCarloResult, targetSla: numbe
             <div className="absolute top-4 right-8 flex gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-red-500 rounded-sm shadow-sm" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase">SLA Breach Line</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase"><Abbr>SLA</Abbr> Breach Line</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-indigo-500 rounded-sm shadow-sm opacity-50" />

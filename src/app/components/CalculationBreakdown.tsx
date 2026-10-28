@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Plus, Calculator } from 'lucide-react';
 import { formatDuration, formatSLAPercentage, CalculationStep } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
+import { Abbr, AbbrText } from '@/app/components/Abbr';
 
 const formatOptionalDuration = (minutes: number | undefined): string =>
   minutes === undefined ? '—' : formatDuration(minutes);
@@ -50,7 +51,7 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                 activeTab === 'mttr' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               )}
             >
-              MTTR & Frequency
+              <Abbr>MTTR</Abbr> & Frequency
             </button>
             <button
               onClick={() => setActiveTab('dr')}
@@ -77,17 +78,17 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                   </span>
                 </div>
                 
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">{step.explanation}</p>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3"><AbbrText text={step.explanation} /></p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {activeTab === 'sla' ? (
                     <>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                         <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Formula</span>
-                        <code className="text-xs font-mono text-indigo-600 dark:text-indigo-400 break-all">{step.formula}</code>
+                        <code className="text-xs font-mono text-indigo-600 dark:text-indigo-400 break-all"><AbbrText text={step.formula} /></code>
                       </div>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Result SLA</span>
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Result <Abbr>SLA</Abbr></span>
                         <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
                           {formatSLAPercentage(step.result)}%
                         </span>
@@ -96,7 +97,7 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                   ) : activeTab === 'mttr' ? (
                     <>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">System MTTR</span>
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">System <Abbr>MTTR</Abbr></span>
                         <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
                           {formatDuration(step.mttrResult || 0)}
                         </span>
@@ -111,13 +112,13 @@ const CalculationBreakdown: React.FC<{ steps: CalculationStep[], onClose: () => 
                   ) : (
                     <>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step RTO</span>
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step <Abbr>RTO</Abbr></span>
                         <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
                           {formatOptionalDuration(step.rtoResult)}
                         </span>
                       </div>
                       <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step RPO</span>
+                        <span className="block text-[9px] font-bold text-slate-400 uppercase mb-1 tracking-tighter">Step <Abbr>RPO</Abbr></span>
                         <span className="text-sm font-mono font-black text-slate-900 dark:text-white">
                           {formatOptionalDuration(step.rpoResult)}
                         </span>

@@ -5,6 +5,7 @@ import { Activity, BarChart3, Dices, Play, RotateCw, ShieldCheck } from 'lucide-
 import SidebarSection from '@/app/components/SidebarSection';
 import { DowntimePeriod, MonteCarloResult, formatDuration } from '@/lib/sla-calculator';
 import { cn } from '@/lib/cn';
+import { Abbr, AbbrText } from '@/app/components/Abbr';
 
 interface ReliabilityAnalysisPanelProps {
   compositeSla: number;
@@ -65,7 +66,7 @@ function BreachBar({ label, probability, detail }: { label: string; probability:
 function Objective({ label, value, target, unsetTitle }: { label: string; value?: number; target: number; unsetTitle: string }) {
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="font-bold text-slate-400 uppercase text-[10px]">{label}</span>
+      <span className="font-bold text-slate-400 uppercase text-[10px]"><AbbrText text={label} /></span>
       {value === undefined ? (
         <span className="font-mono font-black text-slate-400" title={unsetTitle}>not set</span>
       ) : (
@@ -133,7 +134,7 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
         </div>
 
         <div className="mb-4">
-          <label htmlFor={`${id}-target-sla`} className={labelClass}>Target SLA for Simulation (%)</label>
+          <label htmlFor={`${id}-target-sla`} className={labelClass}>Target <Abbr>SLA</Abbr> for Simulation (%)</label>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -193,7 +194,7 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
                 <span className="text-xs font-mono font-bold dark:text-white">{formatDuration(result.medianDowntime)}</span>
               </div>
               <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                <span className="block text-[10px] font-bold text-red-400 uppercase mb-1">P95 (Bad Year)</span>
+                <span className="block text-[10px] font-bold text-red-400 uppercase mb-1"><Abbr>P95</Abbr> (Bad Year)</span>
                 <span className="text-xs font-mono font-bold text-red-500">{formatDuration(result.p95Downtime)}</span>
               </div>
             </div>
@@ -219,11 +220,11 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-500" />
-          <h3 className={sectionHeadingClass}>DR Goals (RTO/RPO)</h3>
+          <h3 className={sectionHeadingClass}><Abbr>DR</Abbr> Goals (<Abbr>RTO</Abbr>/<Abbr>RPO</Abbr>)</h3>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor={`${id}-target-rto`} className={labelClass}>Target RTO (min)</label>
+            <label htmlFor={`${id}-target-rto`} className={labelClass}>Target <Abbr>RTO</Abbr> (min)</label>
             <input
               type="number"
               min="0"
@@ -234,7 +235,7 @@ export default function ReliabilityAnalysisPanel({ compositeSla, simulation, dr,
             />
           </div>
           <div>
-            <label htmlFor={`${id}-target-rpo`} className={labelClass}>Target RPO (min)</label>
+            <label htmlFor={`${id}-target-rpo`} className={labelClass}>Target <Abbr>RPO</Abbr> (min)</label>
             <input
               type="number"
               min="0"

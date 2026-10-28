@@ -26,6 +26,7 @@ import type { ModelWarning } from '@/lib/warnings';
 import type { TreeSearch } from '@/lib/search';
 import DomainPicker, { DomainChips } from '@/app/components/DomainPicker';
 import { parseNumberInput } from '@/lib/number';
+import { Abbr } from '@/app/components/Abbr';
 
 interface ItemNodeProps {
   item: SLAItem;
@@ -515,7 +516,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
 
           {mode === 'percentage' ? (
             <div className="w-full lg:w-32">
-              <label htmlFor={`${fieldId}-sla`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">SLA (%)</label>
+              <label htmlFor={`${fieldId}-sla`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1"><Abbr>SLA</Abbr> (%)</label>
               <input
                 type="number"
                 step="0.001"
@@ -563,7 +564,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           )}
 
           <div className="w-full lg:w-24">
-            <label htmlFor={`${fieldId}-mttr`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">MTTR (min)</label>
+            <label htmlFor={`${fieldId}-mttr`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1"><Abbr>MTTR</Abbr> (min)</label>
             <input
               type="number"
               min="1"
@@ -581,7 +582,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
           {showRecoveryFields && (
             <>
               <div className="w-full lg:w-20">
-                <label htmlFor={`${fieldId}-rto`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RTO (min)</label>
+                <label htmlFor={`${fieldId}-rto`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1"><Abbr>RTO</Abbr> (min)</label>
                 <input
                   type="number"
                   min="0"
@@ -595,7 +596,7 @@ const ItemNode: React.FC<ItemNodeProps> = ({ item, onUpdate, onRemove, onAddChil
               </div>
 
               <div className="w-full lg:w-20">
-                <label htmlFor={`${fieldId}-rpo`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">RPO (min)</label>
+                <label htmlFor={`${fieldId}-rpo`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1"><Abbr>RPO</Abbr> (min)</label>
                 <input
                   type="number"
                   min="0"

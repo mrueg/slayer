@@ -6,6 +6,7 @@ import SidebarSection from '@/app/components/SidebarSection';
 import { DomainImpact, FailureDomain, formatDuration, formatSLAPercentage, getDomainMttr } from '@/lib/sla-calculator';
 import { MAX_FAILURE_DOMAINS } from '@/lib/domains';
 import { parseNumberInput } from '@/lib/number';
+import { Abbr } from '@/app/components/Abbr';
 
 interface FailureDomainsPanelProps {
   domains: FailureDomain[];
@@ -63,7 +64,7 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  SLA (%)
+                  <Abbr>SLA</Abbr> (%)
                   <input
                     type="number" min="0" max="100" step="0.001"
                     value={domain.sla}
@@ -75,7 +76,7 @@ const FailureDomainsPanel: React.FC<FailureDomainsPanelProps> = ({ domains, impa
                   />
                 </label>
                 <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  MTTR (min)
+                  <Abbr>MTTR</Abbr> (min)
                   <input
                     type="number" min="1"
                     value={getDomainMttr(domain)}
