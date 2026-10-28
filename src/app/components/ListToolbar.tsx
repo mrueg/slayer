@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { ChevronsDownUp, ChevronsUpDown, Eye, EyeOff, Search, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Abbr } from '@/app/components/Abbr';
 
 interface ListToolbarProps {
   query: string;
@@ -93,7 +94,7 @@ export default function ListToolbar({
           title={`${showRecoveryFields ? 'Hide' : 'Show'} the RTO and RPO fields on every component`}
         >
           {showRecoveryFields ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-          RTO/RPO
+          <Abbr>RTO</Abbr>/<Abbr>RPO</Abbr>
         </button>
         {canCollapse && (
           <button onClick={onToggleCollapseAll} className={actionClass}>

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import SidebarSection from '@/app/components/SidebarSection';
 import { SensitivityEntry, formatDuration } from '@/lib/sla-calculator';
+import { Abbr } from '@/app/components/Abbr';
 
 const COLLAPSED_COUNT = 5;
 
@@ -23,7 +24,7 @@ const SensitivityRanking: React.FC<{ ranking: SensitivityEntry[] }> = ({ ranking
       </p>
 
       {ranking.length === 0 ? (
-        <p className="text-xs text-slate-500 dark:text-slate-400">No single item or domain limits the system SLA.</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">No single item or domain limits the system <Abbr>SLA</Abbr>.</p>
       ) : (
         <ol className="space-y-3">
           {visible.map((entry, index) => (

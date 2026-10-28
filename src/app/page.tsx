@@ -64,6 +64,7 @@ import ReliabilityAnalysisPanel from '@/app/components/ReliabilityAnalysisPanel'
 import ListToolbar from '@/app/components/ListToolbar';
 import { getModelWarnings, type ModelWarning } from '@/lib/warnings';
 import { useMonteCarloSimulation } from '@/app/useMonteCarloSimulation';
+import { Abbr } from '@/app/components/Abbr';
 
 const RECOVERY_FIELDS_KEY = 'slayer-show-recovery-fields';
 
@@ -662,7 +663,7 @@ export default function ReliabilityModeling() {
           <div className="w-full xl:w-96 space-y-6 shrink-0 xl:sticky xl:top-8">
             <section className="bg-slate-900 dark:bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-xl overflow-hidden transition-colors">
               <div className="p-8 text-center bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900">
-                <p className="text-blue-100 text-sm font-semibold uppercase tracking-widest mb-2">Total System SLA</p>
+                <p className="text-blue-100 text-sm font-semibold uppercase tracking-widest mb-2">Total System <Abbr>SLA</Abbr></p>
                 <div className="text-5xl font-black mb-2 tracking-tighter">
                   {formatSLAPercentage(compositeSla)}%
                 </div>
@@ -697,7 +698,7 @@ export default function ReliabilityModeling() {
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 pb-2">System Reliability</h3>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-sm">System MTTR</span>
+                      <span className="text-slate-400 text-sm">System <Abbr>MTTR</Abbr></span>
                       <span className="font-mono font-medium">{formatDuration(reliability.mttr)}</span>
                     </div>
                     <div className="flex justify-between items-center">

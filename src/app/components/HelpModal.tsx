@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, Calculator, Settings, BarChart3, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { AbbrText } from '@/app/components/Abbr';
 
 const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'engine' | 'simulation' | 'controls'>('engine');
@@ -121,10 +122,10 @@ const HelpModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 {section.content.map((item, i) => (
                   <div key={i} className="group">
                     <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1 group-hover:translate-x-1 transition-transform inline-block">
-                      {item.label}
+                      <AbbrText text={item.label} />
                     </div>
                     <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
-                      {item.text}
+                      <AbbrText text={item.text} />
                     </p>
                   </div>
                 ))}

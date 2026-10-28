@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Cloud, Search } from 'lucide-react';
 import { ICON_MAP } from '@/app/icons';
 import { CLOUD_CATALOG } from '@/app/catalog';
+import { Abbr, AbbrText } from '@/app/components/Abbr';
 
 const CloudCatalogPicker: React.FC<{ onSelect: (service: typeof CLOUD_CATALOG[0]) => void }> = ({ onSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -60,13 +61,13 @@ const CloudCatalogPicker: React.FC<{ onSelect: (service: typeof CLOUD_CATALOG[0]
                     }
                   </div>
                   <div className="text-left">
-                    <div className="text-xs font-black text-slate-900 dark:text-white">{service.name}</div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{service.provider}</div>
+                    <div className="text-xs font-black text-slate-900 dark:text-white"><AbbrText text={service.name} /></div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight"><AbbrText text={service.provider} /></div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400">{service.sla}%</div>
-                  <div className="text-[9px] font-medium text-slate-400">{service.mttr}m MTTR</div>
+                  <div className="text-[9px] font-medium text-slate-400">{service.mttr}m <Abbr>MTTR</Abbr></div>
                 </div>
               </button>
             ))}

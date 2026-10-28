@@ -5,6 +5,7 @@ import { AlertTriangle, Info } from 'lucide-react';
 import SidebarSection from '@/app/components/SidebarSection';
 import type { ModelWarning } from '@/lib/warnings';
 import { cn } from '@/lib/cn';
+import { AbbrText } from '@/app/components/Abbr';
 
 const HIGHLIGHT = ['ring-2', 'ring-amber-400'];
 
@@ -49,7 +50,7 @@ const ModelChecks: React.FC<ModelChecksProps> = ({ warnings, canNavigate, onReve
                 : <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-slate-400" />}
               <span className="text-xs leading-relaxed">
                 <span className={cn("font-bold text-slate-700 dark:text-slate-200", canNavigate && "group-hover:underline")}>{warning.itemName}</span>
-                <span className="text-slate-500 dark:text-slate-400"> — {warning.message}</span>
+                <span className="text-slate-500 dark:text-slate-400"> — <AbbrText text={warning.message} /></span>
               </span>
             </button>
           </li>

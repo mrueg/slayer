@@ -49,7 +49,7 @@ const setup = (overrides: {
   return { user: userEvent.setup(), props };
 };
 
-const objective = (label: string) => screen.getByText(label).nextElementSibling?.textContent;
+const objective = (label: string) => screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === label).nextElementSibling?.textContent;
 
 describe('ReliabilityAnalysisPanel', () => {
   describe('simulation', () => {
